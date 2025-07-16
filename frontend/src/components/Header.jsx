@@ -1,6 +1,6 @@
 // components/Header.jsx
 import React, { useState } from 'react';
-import { MenuIcon, XIcon, UserCircleIcon } from '@heroicons/react/outline';
+import { Bars3Icon, XMarkIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
