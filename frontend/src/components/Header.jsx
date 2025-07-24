@@ -1,6 +1,7 @@
 // components/Header.jsx
 import React, { useState } from 'react';
-import { Bars3Icon, XMarkIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import { Bars3Icon, XMarkIcon,UserCircleIcon } from '@heroicons/react/24/outline'; // ✅ v2
+
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,7 +12,7 @@ const Header = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex-shrink-0 text-2xl font-bold">
-            🌿 PlantCare
+            🌿 Herboscope
           </div>
 
           {/* Desktop Nav */}
@@ -19,7 +20,7 @@ const Header = () => {
             <a href="/" className="hover:text-yellow-300">Home</a>
             <a href="/about" className="hover:text-yellow-300">About</a>
             <a href="/contact" className="hover:text-yellow-300">Contact</a>
-            <a href="/login" className="hover:text-yellow-300">Login / Signup</a>
+            <a href="/register" className="hover:text-yellow-300">Login / Signup</a>
             <UserCircleIcon className="w-7 h-7 text-white" />
           </nav>
 
@@ -36,9 +37,9 @@ const Header = () => {
           <div className="md:hidden flex items-center">
             <button onClick={() => setIsOpen(!isOpen)}>
               {isOpen ? (
-                <XIcon className="h-6 w-6" />
+                <XMarkIcon className="h-6 w-6" />
               ) : (
-                <MenuIcon className="h-6 w-6" />
+                <Bars3Icon className="h-6 w-6" />
               )}
             </button>
           </div>
