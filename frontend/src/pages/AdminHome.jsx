@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PlantCard from '../components/PlantCard';
 
 export default function AdminHome({ api }) {
+  const navigate = useNavigate();
   const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     if (!api) {
@@ -26,6 +29,21 @@ export default function AdminHome({ api }) {
       });
   }, [api]);
 
+  const deletePlant = async (id) => {
+    if (!api || !id) return;
+    const confirmed = window.confirm('Delete this plant? This cannot be undone.');
+    if (!confirmed) return;
+    setDeletingId(id);
+    try {
+      await api.delete(`/home/${id}`);
+      setPlants((prev) => prev.filter((plant) => plant.id !== id));
+    } catch (err) {
+      setError(err.message || 'Failed to delete plant');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-400 via-green-300 to-teal-500 p-6">
       <div className="max-w-7xl mx-auto text-white text-center">
@@ -39,7 +57,31 @@ export default function AdminHome({ api }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
         {plants.map((plant, index) => (
-          <PlantCard key={index} {...plant} />
+          <div key={plant.id || index}>
+            <PlantCard
+              {...plant}
+              actions={
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/edit-plant/${plant.id}`)}
+                    className="rounded-lg bg-blue-600 text-white px-3 py-1 text-xs font-semibold shadow"
+                    disabled={deletingId === plant.id}
+                  >
+                    Edit Plant
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deletePlant(plant.id)}
+                    className="rounded-lg bg-red-600 text-white px-3 py-1 text-xs font-semibold shadow"
+                    disabled={deletingId === plant.id}
+                  >
+                    {deletingId === plant.id ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              }
+            />
+          </div>
         ))}
       </div>
     </div>

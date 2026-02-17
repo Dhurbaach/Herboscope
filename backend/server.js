@@ -30,23 +30,13 @@ app.use(cors({
   exposedHeaders: ['Authorization'],
 }));
 
-// Prefer serving images from backend/models/plantImages if present (your DB stores paths like '/plantImages/xxx')
-const plantImagesDir = path.join(__dirname, 'plantImages');
-const modelsPlantImagesDir = path.join(__dirname, 'models', 'plantImages');
-
-// Create a fallback folder only when models folder isn't present
-if (!fs.existsSync(modelsPlantImagesDir) && !fs.existsSync(plantImagesDir)) {
-  fs.mkdirSync(plantImagesDir, { recursive: true });
+// Serve uploads folder statically (after CORS middleware)
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
+app.use('/uploads', express.static(uploadsDir));
 
-// Mount /plantImages to the actual image directory so DB-stored paths like '/plantImages/...' resolve correctly
-const imagesMountDir = fs.existsSync(modelsPlantImagesDir) ? modelsPlantImagesDir : plantImagesDir;
-app.use('/plantImages', express.static(imagesMountDir));
-
-// Also keep the explicit /models/plantImages route for direct access when the models folder exists
-if (fs.existsSync(modelsPlantImagesDir)) {
-  app.use('/models/plantImages', express.static(modelsPlantImagesDir));
-}
 
 const plantRoutes = require('./routes/plantRoute');
 const userRoutes = require('./routes/userRoute');

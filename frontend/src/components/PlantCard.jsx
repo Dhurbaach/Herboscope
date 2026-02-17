@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const PlantCard = ({ id, image, localName, scientificName, description }) => {
+const PlantCard = ({ id, image, localName, scientificName, description, actions }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -17,8 +17,13 @@ const PlantCard = ({ id, image, localName, scientificName, description }) => {
   return (
     <div 
       onClick={handleClick}
-      className="bg-white/10 backdrop-blur-md border border-white/30 rounded-2xl shadow-lg overflow-hidden transition-all hover:shadow-2xl cursor-pointer hover:scale-105"
+      className="bg-blue-300 backdrop-blur-md border border-white/30 rounded-2xl shadow-lg overflow-hidden transition-all hover:shadow-2xl cursor-pointer hover:scale-105 relative"
     >
+      {actions ? (
+        <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+          {actions}
+        </div>
+      ) : null}
       <img
         src={image || PLACEHOLDER}
         alt={localName}

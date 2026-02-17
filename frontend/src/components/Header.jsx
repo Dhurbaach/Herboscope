@@ -1,7 +1,7 @@
 // components/Header.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Bars3Icon, XMarkIcon, UserCircleIcon } from '@heroicons/react/24/outline';
-import api from '../api';
+import api from '../utils/api';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);

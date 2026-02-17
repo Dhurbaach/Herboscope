@@ -1,142 +1,32 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlantIcon, CameraIcon, UploadIcon, CrossIcon, LoadingIcon, SuccessIcon } from '../components/Icons';
+import { PlantIcon, LoadingIcon, SuccessIcon } from '../components/Icons';
+import PlantPhotoSelector from '../components/PlantPhotoSelector';
+import Toast from '../components/Toast';
+import uploadImage from '../utils/uploadImage';
+import api from '../utils/api';
 
 export default function AddPlant() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         plantName: '',
-        scientificName: '',
+         scientificName: '',
+         uses: '',
         description: '',
-        uses: '',
-        photo: null,
-        photoPreview: null
+        imagePath: '',
     });
 
-    const fileInputRef = useRef(null);
-    const videoRef = useRef(null);
-    const canvasRef = useRef(null);
-    const [showCamera, setShowCamera] = useState(false);
-    const [stream, setStream] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
-
-    // Attach stream to video when it becomes available
-    useEffect(() => {
-        if (showCamera && stream && videoRef.current) {
-            videoRef.current.srcObject = stream;
-        }
-    }, [showCamera, stream]);
+    const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // Handle file upload from computer
-    const handleFileSelect = (e) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                setFormData(prev => ({
-                    ...prev,
-                    photo: file,
-                    photoPreview: event.target?.result
-                }));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    // Start camera
-    const startCamera = async () => {
-        try {
-            const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment' },
-            });
-            setStream(mediaStream);
-            setShowCamera(true);
-        } catch (err) {
-            alert('Unable to access camera: ' + err.message);
-        }
-    };
-
-    // Capture photo from camera
-    const capturePhoto = () => {
-        if (!canvasRef.current || !videoRef.current) {
-            alert('Camera not ready');
-            return;
-        }
-
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-
-        if (!context) {
-            alert('Could not get canvas context');
-            return;
-        }
-
-        // Ensure video has loaded
-        if (video.videoWidth === 0 || video.videoHeight === 0) {
-            alert('Video not ready yet. Please wait a moment and try again.');
-            return;
-        }
-
-        // Set canvas size to match video
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        // Draw the current video frame on canvas
-        context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-
-        // Convert canvas to blob and create preview
-        canvas.toBlob((blob) => {
-            if (blob) {
-                const file = new File(
-                    [blob],
-                    `plant-capture-${Date.now()}.jpg`,
-                    { type: 'image/jpeg' }
-                );
-                const preview = canvas.toDataURL('image/jpeg');
-
-                setFormData(prev => ({
-                    ...prev,
-                    photo: file,
-                    photoPreview: preview || null,
-                }));
-
-                stopCamera();
-            }
-        }, 'image/jpeg', 0.9);
-    };
-
-    // Stop camera
-    const stopCamera = () => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            setStream(null);
-        }
-        setShowCamera(false);
-    };
-
-    // Cleanup stream on component unmount
-    useEffect(() => {
-        return () => {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-        };
-    }, [stream]);
-
-    // Remove photo
-    const removePhoto = () => {
-        setFormData(prev => ({
-            ...prev,
-            photo: null,
-            photoPreview: null
-        }));
+    const handlePhotoChange = (next) => {
+        setFormData(prev => ({ ...prev, ...next }));
     };
 
     // Submit form
@@ -154,48 +44,40 @@ export default function AddPlant() {
 
         setIsLoading(true);
         try {
-            // Create FormData for multipart upload
-            const fd = new FormData();
-            fd.append('plantName', formData.plantName);
-            fd.append('scientificName', formData.scientificName);
-            fd.append('description', formData.description);
-            fd.append('uses', formData.uses);
-            fd.append('photo', formData.photo);
 
-            // // // Send to backend (adjust endpoint as needed)
-            // // const response = await fetch('/api/plants', {
-            // //     method: 'POST',
-            // //     body: fd
-            // // });
+            // Upload image and get URL
+            const uploadRes = await uploadImage(formData.photo);
+            const imageUrl= uploadRes.imageUrl;
+            if (!imageUrl) {
+                throw new Error('Image upload failed');
+            }
 
-            // if (!response.ok) throw new Error('Failed to add plant');
-
-            // const responseData = await response.json();
-            // const plantId = responseData?.plant?.id || responseData?.id || Date.now();
-            // Send to backend in background (don't wait for response)
-
-            // Generate plant ID for immediate display
-            const plantId = Date.now();
-
-            // Store plant data in sessionStorage for immediate display on Plant page
+            // Save plant data to backend
             const plantData = {
-                id: plantId,
-                localName: formData.plantName,
+                plantName: formData.plantName,
                 scientificName: formData.scientificName,
-                description: formData.description,
                 uses: formData.uses,
-                image: formData.photoPreview
+                description: formData.description,
+                imagePath: imageUrl,
             };
-            sessionStorage.setItem(`plant_${plantId}`, JSON.stringify(plantData));
-
-            setSuccessMessage('Plant added successfully! Redirecting...');
-
-            // Navigate to plant details page after a brief delay
+            const response = await api.post('/home/addPlant', plantData);
+            const plantId = response.data?.plant?.id;
+            
+            // Show success toast
+            setToastMessage('Plant added successfully! 🌿');
+            setShowToast(true);
+            
+            // Navigate to plant detail page after a short delay
             setTimeout(() => {
-                navigate(`/plant/${plantId}`);
-            }, 800);
+                if (plantId) {
+                    navigate(`/plant/${plantId}`);
+                } else {
+                    navigate('/');
+                }
+            }, 1500);
         } catch (err) {
-            alert('Error: ' + (err instanceof Error ? err.message : 'Unknown error'));
+            console.error('Error adding plant:', err);
+            alert('Failed to add plant. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -206,110 +88,16 @@ export default function AddPlant() {
             <div className="max-w-3xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <div className="flex justify-center mb-4">
-                        <PlantIcon className="w-20 h-12 text-green-600" />
-                    </div>
                     <h1 className="text-4xl font-bold text-green-800 mb-2">Add New Plant</h1>
                     <p className="text-gray-600">Contribute to our plant database by sharing plant information and photos</p>
                 </div>
 
-                {/* Success Message */}
-                {successMessage && (
-                    <div className="mb-6 p-4 bg-green-100 border-l-4 border-green-600 text-green-700 rounded">
-                        {successMessage}
-                    </div>
-                )}
-
                 <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-8">
-                    {/* Photo Section */}
-                    <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center"><CameraIcon className="w-7 h-7 mr-2" /> Plant Photo</h2>
-
-                        {formData.photoPreview ? (
-                            // Photo Preview
-                            <div className="relative mb-4">
-                                <img src={formData.photoPreview} alt="Plant preview" className="w-full max-h-80 rounded-lg object-cover border-2 border-green-300" />
-                                <button
-                                    type="button"
-                                    onClick={removePhoto}
-                                    className="absolute top-2 right-2 px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                                >
-                                    <CrossIcon className="w-5 h-5 mr-1 inline" />Remove
-                                </button>
-                            </div>
-                        ) : (
-                            // Photo Options
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                {/* Upload from Computer */}
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="p-6 border-2 border-dashed border-green-400 rounded-lg hover:border-green-600 hover:bg-green-50 transition text-center"
-                                >
-                                    <div className="flex justify-center mb-2">
-                                        <UploadIcon className="w-10 h-10" />
-                                    </div>
-                                    <div className="font-semibold text-gray-800">Upload Photo</div>
-                                    <div className="text-sm text-gray-600">From your computer</div>
-                                </button>
-
-                                {/* Take Photo with Camera */}
-                                <button
-                                    type="button"
-                                    onClick={startCamera}
-                                    className="p-6 border-2 border-dashed border-blue-400 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition text-center"
-                                >
-                                    <div className="flex justify-center mb-2">
-                                        <CameraIcon className="w-10 h-10" />
-                                    </div>
-                                    <div className="font-semibold text-gray-800">Take Photo</div>
-                                    <div className="text-sm text-gray-600">Using your camera</div>
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Hidden File Input */}
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileSelect}
-                            className="hidden"
-                        />
-
-                        {/* Camera Modal */}
-                        {showCamera && (
-                            <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-                                <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
-                                    <h3 className="text-xl font-bold mb-4 flex items-center"><CameraIcon className="w-6 h-6 mr-2" /> Take Photo</h3>
-                                    <video
-                                        ref={videoRef}
-                                        autoPlay
-                                        playsInline
-                                        muted
-                                        style={{ width: '100%', borderRadius: '0.5rem', backgroundColor: '#000', marginBottom: '1rem' }}
-                                    />
-                                    <canvas ref={canvasRef} className="hidden" />
-                                    <div className="flex gap-3">
-                                        <button
-                                            type="button"
-                                            onClick={capturePhoto}
-                                            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold flex items-center justify-center"
-                                        >
-                                            <CameraIcon className="w-5 h-5 mr-2" /> Capture Photo
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={stopCamera}
-                                            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <PlantPhotoSelector
+                        photo={formData.photo}
+                        photoPreview={formData.photoPreview}
+                        onChange={handlePhotoChange}
+                    />
 
                     {/* Form Fields */}
                     <div className="space-y-6">
@@ -399,6 +187,16 @@ export default function AddPlant() {
                     </div>
                 </form>
             </div>
+            
+            {/* Toast Notification */}
+            {showToast && (
+                <Toast
+                    message={toastMessage}
+                    type="success"
+                    onClose={() => setShowToast(false)}
+                    duration={1500}
+                />
+            )}
         </div>
     );
 }
