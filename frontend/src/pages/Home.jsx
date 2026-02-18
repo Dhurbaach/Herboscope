@@ -1,19 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PlantCard from '../components/PlantCard';
-import PlantPhotoSelector from '../components/PlantPhotoSelector';
 
 export default function Home({ api }) {
+  const navigate = useNavigate();
   const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState('name_asc'); // default sorting
-  const [photo, setPhoto] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
-
-  const handlePhotoChange = (next) => {
-    setPhoto(next.photo || null);
-    setPhotoPreview(next.photoPreview || null);
-  };
 
   useEffect(() => {
     if (!api) {
@@ -53,21 +47,20 @@ export default function Home({ api }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-400 via-orange-300 to-red-400 p-6">
-      <div className="max-w-7xl mx-auto text-white text-center mb-6">
+      <div className="max-w-7xl mx-auto text-white text-center mb-6 relative">
         <h1 className="text-4xl font-bold">Welcome to Herboscope</h1>
         <p className="mt-2 text-lg">Explore medicinal plants and their uses</p>
-      </div>
-
-      <div className="max-w-3xl mx-auto mb-8 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl p-6">
-        <h2 className="text-2xl font-bold text-white mb-2">Identify a Plant</h2>
-        <p className="text-white/90 mb-4">
-          Upload a plant image to recognize it. We will use this image in a later API call.
-        </p>
-        <PlantPhotoSelector
-          photo={photo}
-          photoPreview={photoPreview}
-          onChange={handlePhotoChange}
-        />
+        
+        {/* Recognize Button - Top Right */}
+        <button
+          onClick={() => navigate('/recognize')}
+          className="absolute top-0 right-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg shadow-lg transition-all duration-300 flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          Recognize Plant
+        </button>
       </div>
 
       {/* Loading / Error Messages */}
@@ -79,7 +72,7 @@ export default function Home({ api }) {
       {/* Sorting Dropdown */}
       <div className="max-w-6xl mx-auto mb-6 text-right">
         <label className="mr-2 font-semibold text-white">Sort by:</label>
-        <select 
+        <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
           className="px-1 py-0.5 rounded-lg text-black"

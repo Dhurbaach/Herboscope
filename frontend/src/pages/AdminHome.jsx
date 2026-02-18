@@ -46,8 +46,17 @@ export default function AdminHome({ api }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-400 via-green-300 to-teal-500 p-6">
-      <div className="max-w-7xl mx-auto text-white text-center">
-        <h1 className="text-4xl font-bold">Admin Home</h1>
+      <div className="max-w-7xl mx-auto text-white">
+        <div className="flex items-center justify-between">
+          <h1 className="text-4xl font-bold">Admin Home</h1>
+          <button
+            type="button"
+            onClick={() => navigate('/add-plant')}
+            className="rounded-lg bg-emerald-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-emerald-700"
+          >
+            Add New Plant
+          </button>
+        </div>
       </div>
 
       <div className="max-w-6xl mx-auto mb-6 text-center text-white">

@@ -117,7 +117,7 @@ const Register = () => {
         >
           {loading ? 'Registering...' : 'Register'}
         </button>
-        {error && <p className="mt-3 text-sm text-red-300 text-center">{error}</p>}
+        {error && <p className="mt-3 text-sm text-red-600 text-center">{error}</p>}
         <p className="mt-4 text-sm text-white text-center">
   Already have an account?{' '}
   <Link

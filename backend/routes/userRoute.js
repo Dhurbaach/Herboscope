@@ -31,6 +31,11 @@ router.post('/register', async (req, res) => {
     try {
          // Create a new user document using the Mongoose model
         const data = req.body;
+        //check if email already exists
+        const existingUser = await User.findOne({ email: data.email });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Email already registered' });
+        }
         const newUser = new User(data);
 
         // Save the new user to the database

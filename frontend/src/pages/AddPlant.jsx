@@ -64,7 +64,7 @@ export default function AddPlant() {
             const plantId = response.data?.plant?.id;
             
             // Show success toast
-            setToastMessage('Plant added successfully! 🌿');
+            setToastMessage('Plant added successfully!');
             setShowToast(true);
             
             // Navigate to plant detail page after a short delay

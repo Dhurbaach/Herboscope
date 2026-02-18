@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const Plant = require('../models/plantModel');
 const upload=require("../uploadMiddleware");
+const fetch = require('node-fetch');
+const FormData = require('form-data');
+const multer = require('multer');
+const axios = require('axios');
+
+const uploadIdentify=multer();
 
 // Helper: normalize DB imagePath to public URL
 const normalizeImagePath = (req, imgPath) => {
@@ -118,6 +124,39 @@ router.post('/home/addPlant', async (req, res) => {
   }
 });
 
+//route to call plantnet api for plant recognition
+router.post('/identify', uploadIdentify.single("image"), async (req, res) => {
+  try {
+    const organ = req.body.organ || "auto";
+    if (!req.file) {
+      return res.status(400).json({ message: 'Image and organ are required' });
+    }
+
+    // Call PlantNet API
+    const formData = new FormData();
+    formData.append('organs', organ);
+    formData.append('images', req.file.buffer, req.file.originalname);
+
+    const response = await fetch(`https://my-api.plantnet.org/v2/identify/all?api-key=${process.env.PLANTNET_API_KEY}`, {
+      method: 'POST',
+      body: formData,
+      headers: formData.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`PlantNet API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('PlantNet response:', data);
+    res.json(data);
+  } catch (err) {
+    console.error('Error identifying plant:', err);
+    res.status(500).json({ message: 'Error identifying plant', error: err.message });
+  }
+});
+
+
 // PATCH /home/:id - update plant name and/or description
 router.patch('/home/:id', async (req, res) => {
   try {
@@ -163,6 +202,81 @@ router.delete('/home/:id', async (req, res) => {
   }
 });
 
+// GET /search-images - Search for similar plant images from Wikimedia Commons
+router.get('/search-images', async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ message: 'Query parameter is required' });
+    }
 
+    const headers = {
+      'User-Agent': 'Herboscope-App (https://github.com/herboscope)'
+    };
+
+    // Search Wikimedia Commons for plant images
+    const response = await axios.get('https://commons.wikimedia.org/w/api.php', {
+      params: {
+        action: 'query',
+        list: 'search',
+        srsearch: query,
+        srnamespace: 6, // File namespace
+        format: 'json',
+        srlimit: 20
+      },
+      headers,
+      timeout: 15000
+    });
+
+    const searchResults = response.data.query.search || [];
+    
+    // Fetch image details in parallel using Promise.all
+    const imageDetailsFetches = searchResults.slice(0, 12).map(result =>
+      axios.get('https://commons.wikimedia.org/w/api.php', {
+        params: {
+          action: 'query',
+          titles: result.title,
+          prop: 'imageinfo',
+          iiprop: 'url|size|mime',
+          format: 'json'
+        },
+        headers,
+        timeout: 10000
+      })
+        .then(fileResponse => {
+          const pages = fileResponse.data.query.pages;
+          const page = Object.values(pages)[0];
+          
+          if (page.imageinfo && page.imageinfo[0]) {
+            const imgInfo = page.imageinfo[0];
+            if (imgInfo.mime && imgInfo.mime.startsWith('image/')) {
+              return {
+                url: imgInfo.url,
+                title: result.title,
+                source: 'Wikimedia Commons',
+                width: imgInfo.width,
+                height: imgInfo.height
+              };
+            }
+          }
+          return null;
+        })
+        .catch(error => {
+          console.error(`Failed to get details for ${result.title}:`, error.message);
+          return null;
+        })
+    );
+
+    const imageDetails = (await Promise.all(imageDetailsFetches))
+      .filter(img => img !== null)
+      .slice(0, 12);
+
+    res.json({ results: imageDetails });
+  } catch (err) {
+    console.error('Image search error:', err.message);
+    res.status(500).json({ message: 'Failed to search for images', error: err.message });
+  }
+});
 
 module.exports = router;

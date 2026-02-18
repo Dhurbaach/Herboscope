@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:3000', // or your backend URL
-  timeout: 20000, // Set a timeout for requests (optional)
+  timeout: 60000, // Set a timeout for requests (optional) - 60 seconds for image search
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -27,10 +27,16 @@ api.interceptors.response.use(
         // Handle specific error status codes
 
         if (error.response) {
-            if (error.response.status === 401) {
-                //Redirect to login page
-                window.location.href = '/login';
-            } else if (error.response.status === 500) {
+          if (error.response.status === 401) {
+            const requestUrl = error.config?.url || '';
+            const isAuthRequest = requestUrl.includes('/login') || requestUrl.includes('/register');
+            const isOnAuthPage = typeof window !== 'undefined' && (window.location.pathname === '/login' || window.location.pathname === '/register');
+
+            // Avoid redirect loop on auth pages or auth requests
+            if (!isAuthRequest && !isOnAuthPage) {
+              window.location.href = '/login';
+            }
+          } else if (error.response.status === 500) {
                 console.error('Server error:', error.response.data);
             }
         } else if (error.code === 'ECONNABORTED') {

@@ -12,10 +12,12 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import AddPlant from './pages/AddPlant';
 import EditPlant from './pages/EditPlant';
+import PlantRecognize from './pages/PlantRecognize';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Signin';
 import Register from './pages/Register';
 import AdminHome from './pages/AdminHome';
+import ApiResponse from './pages/ApiResponse';
 // import EditPlant from './pages/EditPlant';
 
 function AppContent() {
@@ -55,6 +57,8 @@ function AppContent() {
         <Route path='/edit-plant/:id' element={<EditPlant api={api} />} />
         <Route path="/plant/:id" element={<Plant api={api} />} />
         <Route path="/about" element={<About />} />
+          <Route path='/recognize' element={<PlantRecognize />} />
+          <Route path='/api-response' element={<ApiResponse />} />
         <Route
           path="/contact"
           element={
