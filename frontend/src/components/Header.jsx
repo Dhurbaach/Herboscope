@@ -1,15 +1,16 @@
 // components/Header.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Bars3Icon, XMarkIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import api from '../utils/api';
+import { UserContext } from './context/userContext';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const { user, clearUser } = useContext(UserContext);
   const timerRef = useRef(null);
-  const [user, setUser] = useState(null);
 
   useEffect(() => {
     if (!query) {
@@ -36,60 +37,13 @@ const Header = () => {
     };
   }, [query]);
 
-  // Load current user profile and listen for auth changes
-  useEffect(() => {
-    const fetchProfile = () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        api.get('/profile')
-          .then((res) => {
-            const u = res.data?.user || null;
-            setUser(u);
-            if (u) localStorage.setItem('user', JSON.stringify(u));
-          })
-          .catch(() => {
-            delete api.defaults.headers.common['Authorization'];
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setUser(null);
-          });
-      } else {
-        // try to read a cached user for immediate update
-        const cached = localStorage.getItem('user');
-        if (cached) setUser(JSON.parse(cached));
-        else setUser(null);
-      }
-    };
-
-    fetchProfile();
-
-    const onAuthChanged = () => fetchProfile();
-    const onStorage = (e) => {
-      if (e.key === 'token' || e.key === 'user') fetchProfile();
-    };
-
-    window.addEventListener('authChanged', onAuthChanged);
-    window.addEventListener('storage', onStorage);
-
-    return () => {
-      window.removeEventListener('authChanged', onAuthChanged);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
-
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    delete api.defaults.headers.common['Authorization'];
-    setUser(null);
-    // Notify other parts of the app
-    window.dispatchEvent(new Event('authChanged'));
+    clearUser();
     window.location.href = '/';
   };
 
-  const openPlantNewTab = (id) => {
-    window.open(`/plant/${id}`, '_blank', 'noopener');
+  const openPlant = (id) => {
+    window.location.href = `/plant/${id}`;
     setQuery('');
     setShowSuggestions(false);
   };
@@ -105,19 +59,26 @@ const Header = () => {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex space-x-5 items-center">
+            {user?.role === 'admin' && (
+              <a href="/admin" className="hover:text-yellow-300">Admin</a>
+            )}
             <a href="/" className="hover:text-yellow-300">Home</a>
-            <a href="/about" className="hover:text-yellow-300">About</a>
-            <a href="/contact" className="hover:text-yellow-300">Contact</a>
-            <a href="/add-plant" className="hover:text-yellow-300">Add Plant</a>
+            {
+              user?.role !== 'admin' && (
+                <>
+                  <a href="/about" className="hover:text-yellow-300">About</a>
+                  <a href="/contact" className="hover:text-yellow-300">Contact</a>
+                </>
+              )}
             {user ? (
               <>
                 <button onClick={handleLogout} className="hover:text-yellow-300">Logout</button>
                 <UserCircleIcon className="w-7 h-7 text-white" />
-                <span className="font-medium ">Hi,{user.username[0].toUpperCase() + user.username.slice(1).toLowerCase()}</span>
+                <span className="font-medium ">Hi,{(user?.fullName || user?.username || 'User').split(' ')[0]}</span>
               </>
             ) : (
               <>
-                <a href="/register" className="hover:text-yellow-300">Signup</a>
+                <a href="/login" className="hover:text-yellow-300">Sign In</a>
               </>
             )}
           </nav>
@@ -137,7 +98,7 @@ const Header = () => {
                   <li
                     key={s.id}
                     className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={() => openPlantNewTab(s.id)}
+                    onClick={() => openPlant(s.id)}
                   >
                     {s.localName}
                   </li>
@@ -164,12 +125,15 @@ const Header = () => {
         <div className="md:hidden bg-green-700 px-4 pb-4">
           <div className="flex flex-col space-y-3">
             <a href="/" className="hover:text-yellow-300">Home</a>
+            {user?.role === 'admin' && (
+              <a href="/admin" className="hover:text-yellow-300">Admin</a>
+            )}
             <a href="/about" className="hover:text-yellow-300">About</a>
             <a href="/contact" className="hover:text-yellow-300">Contact</a>
             {user ? (
               <>
                 <div className="flex items-center space-x-2">
-                  <span>{user.username}</span>
+                  <span>{(user?.fullName || user?.username || 'User').split(' ')[0]}</span>
                 </div>
                 <button onClick={handleLogout} className="text-left hover:text-yellow-300">Logout</button>
               </>
@@ -190,7 +154,7 @@ const Header = () => {
             />
           </div>
         </div>
-      )} 
+      )}
     </header>
   );
 };

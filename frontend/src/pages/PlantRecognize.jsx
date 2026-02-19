@@ -1,15 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PlantPhotoSelector from '../components/PlantPhotoSelector';
 import { LoadingIcon } from '../components/Icons';
 import api from '../utils/api';
+import { useUserAuth } from '../../hooks/UserAuth';
+import Toast from '../components/Toast';
 
 const PlantRecognize = () => {
+    const { authMessage } = useUserAuth();
     const navigate = useNavigate();
     const [photo, setPhoto] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
     const [loading, setLoading] = useState(false);
     const [organName, setOrganName] = useState('leaf'); // default to leaf if not specified
+
+    const [showAuthToast, setShowAuthToast] = useState(false);
+    const [authToastMessage, setAuthToastMessage] = useState('');
+    const [showErrorToast, setShowErrorToast] = useState(false);
+    const [errorToastMessage, setErrorToastMessage] = useState('');
+    const [showSuccessToast, setShowSuccessToast] = useState(false);
+    const [successToastMessage, setSuccessToastMessage] = useState('');
+
+    // Capture auth message when it appears
+    useEffect(() => {
+        if (authMessage && !showAuthToast) {
+            setAuthToastMessage(authMessage);
+            setShowAuthToast(true);
+        }
+    }, [authMessage, showAuthToast]);
 
     const handlePhotoChange = (next) => {
         setPhoto(next.photo || null);
@@ -23,7 +41,8 @@ const PlantRecognize = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!photo) {
-            alert('Please add a photo');
+            setErrorToastMessage('Please add a photo');
+            setShowErrorToast(true);
             return;
         }
         setLoading(true);
@@ -37,25 +56,27 @@ const PlantRecognize = () => {
                     'Content-Type': 'multipart/form-data',
                 },
             });
-            
+
             const data = response.data;
             console.log('Backend response:', data);
-            
+
             // Check if we got results from PlantNet
             if (data.results && data.results.length > 0) {
                 const topResult = data.results[0];
                 console.log('Top match:', topResult.species.scientificNameWithoutAuthor);
                 console.log('Score:', topResult.score);
-                
+
                 // Navigate to results page with response data and uploaded image
                 navigate('/api-response', { state: { response: data, photoPreview } });
             } else {
-                alert('No plant matches found. Try a different image or angle.');
+                setErrorToastMessage('No plant matches found. Try a different image or angle.');
+                setShowErrorToast(true);
             }
         } catch (err) {
             console.error('Error recognizing plant:', err);
             const errorMsg = err?.response?.data?.message || err.message || 'Unknown error';
-            alert('Failed to recognize plant. Please try again.\n' + errorMsg);
+            setErrorToastMessage('Failed to recognize plant. Please try again.\n' + errorMsg);
+            setShowErrorToast(true);
         } finally {
             setLoading(false);
         }
@@ -126,6 +147,33 @@ const PlantRecognize = () => {
                     </div>
                 </form>
             </div>
+            {/* Auth Error Toast */}
+            {showAuthToast && (
+                <Toast
+                    message={authToastMessage}
+                    type="error"
+                    onClose={() => setShowAuthToast(false)}
+                    duration={10000}
+                />
+            )}
+            {/* Error Toast */}
+            {showErrorToast && (
+                <Toast
+                    message={errorToastMessage}
+                    type="error"
+                    onClose={() => setShowErrorToast(false)}
+                    duration={5000}
+                />
+            )}
+            {/* Success Toast */}
+            {showSuccessToast && (
+                <Toast
+                    message={successToastMessage}
+                    type="success"
+                    onClose={() => setShowSuccessToast(false)}
+                    duration={3000}
+                />
+            )}
         </div>
     );
 };

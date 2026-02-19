@@ -1,126 +1,118 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import Layout from '../layouts/AuthLayout';
+import Input from '../components/Input/Input';
+import Toast from '../components/Toast';
+import { UserContext } from '../components/context/userContext';
+
 
 export default function Signin() {
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({
-        username: '',
-        password: '',
-    });
+    const { updateUser } = useContext(UserContext);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    const validateEmail = (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
     };
 
-   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError(null);
-  setLoading(true);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!validateEmail(email)) {
+            setError('Please enter a valid email address.');
+            return;
+        }
+        if (!password) {
+            setError('Please enter your password.');
+            return;
+        }
+        setError(null);
+        setLoading(true);
 
-  try {
-    const res = await api.post('/login', {
-      username: formData.username,
-      password: formData.password,
-    });
+        try {
+            const res = await api.post('/login', {
+                email: email,
+                password: password,
+            });
 
-    const token = res?.data?.token;
+            const { token, user } = res.data;
 
-    if (token) {
-      localStorage.setItem('token', token);
-
-      // Fetch profile (Authorization header now auto-attached)
-      try {
-        const profileRes = await api.get('/profile');
-        const user = profileRes?.data?.user || null;
-        if (user) localStorage.setItem('user', JSON.stringify(user));
-        else localStorage.removeItem('user');
-      } catch {
-        localStorage.removeItem('user');
-      }
-
-      window.dispatchEvent(new Event('authChanged'));
-      navigate('/');
-    } else {
-      setError('Login failed: no token returned');
-    }
-  } catch (err) {
-    const message =
-      err?.response?.data?.error ||
-      err?.response?.data?.message ||
-      err.message ||
-      'Login failed';
-    setError(message);
-  } finally {
-    setLoading(false);
-  }
-};
+            if (token) {
+                localStorage.setItem('token', token);
+                localStorage.setItem('user', JSON.stringify(user));
+                updateUser(user); // Update context
+                window.dispatchEvent(new Event('authChanged'));
+                
+                // Show success toast
+                setShowSuccessToast(true);
+                
+                // Navigate after a short delay so user sees the toast
+                setTimeout(() => {
+                    if (user && user.role === 'admin') {
+                        navigate('/admin');
+                    } else {
+                        navigate('/');
+                    }
+                }, 2000);
+            }
+        } catch (err) {
+            if (err.response && err.response.data.message) {
+                setError(err.response.data.message);
+            }
+            else {
+                setError('An error occurred during login. Please try again.');
+            }
+        }
+        finally {
+            setLoading(false);
+        }
+    };
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-400 via-green-300 to-teal-500 px-4">
-            <div className="bg-white/10 backdrop-blur-lg border border-white/30 p-8 rounded-2xl w-full max-w-md shadow-xl">
-                <h2 className="text-3xl font-bold text-center text-white mb-6">Sign In</h2>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label htmlFor="username" className="block text-white mb-1">
-                            Username
-                        </label>
-                        <input
-                            type="text"
-                            name="username"
-                            id="username"
-                            required
-                            value={formData.username}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 rounded-lg bg-white/20 text-white placeholder-white/80 focus:outline-none focus:ring-2 focus:ring-white/40"
-                            placeholder="Enter your username"
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="password" className="block text-white mb-1">
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            name="password"
-                            id="password"
-                            required
-                            value={formData.password}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 rounded-lg bg-white/20 text-white placeholder-white/80 focus:outline-none focus:ring-2 focus:ring-white/40"
-                            placeholder="Enter your password"
-                        />
-                        <div className="text-right mt-1">
-                            <Link
-                                to="/forgot-password"
-                                className="text-sm text-green-200 hover:underline"
-                            >
-                                Forgot Password?
-                            </Link>
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className={`w-full ${loading ? 'bg-green-300' : 'bg-green-500 hover:bg-green-600'} transition-all duration-300 py-2 px-4 rounded-lg font-semibold text-white`}
-                    >
-                        {loading ? 'Signing in...' : 'Sign In'}
-                    </button>
-                </form>
-
-                {error && <p className="mt-4 text-sm text-red-300 text-center">{error}</p>}
-
-                <p className="mt-4 text-sm text-white text-center">
-                    Don't have an account?{' '}
-                    <Link to="/register" className="text-green-200 hover:underline font-medium">
-                        Register here
-                    </Link>
+        <Layout>
+            <div className="lg:w-[70%] h-auto md:h-full mt-10 md:mt-0 flex flex-col justify-center">
+                <h3 className="text-xl font-semibold text-black">Welcome Back</h3>
+                <p className="text-xs text-slate-700 mt-[5px] mb-6">
+                    Please enter your details to login to your account.
                 </p>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <Input
+                        type="email"
+                        name="email"
+                        placeholder="abc@gmail.com"
+                        value={email}
+                        onChange={({ target }) => setEmail(target.value)}
+                        label="Email Address"
+                    />
+                    <Input
+                        type="password"
+                        placeholder="Min 8 characters"
+                        name="password"
+                        value={password}
+                        onChange={({ target }) => setPassword(target.value)}
+                        label="Password"
+                    />
+                    {error && <p className='text-red-500 text-xs pb-2.5'>{error}</p>}
+                    <button type='submit' className='btn-primary'>LOGIN</button>
+                    <p className='text-[13px] text-slate-800 mt-3'>
+                        Don't have an account? {" "}
+                        <Link className='font-medium text-primary underline' to="/register">Register</Link>
+                    </p>
+
+                </form>
             </div>
-        </div>
+            {showSuccessToast && (
+                <Toast
+                    message="Login successful! Redirecting..."
+                    type="success"
+                    onClose={() => setShowSuccessToast(false)}
+                    duration={1500}
+                />
+            )}
+        </Layout>
     );
 }

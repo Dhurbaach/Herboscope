@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PlantCard from '../components/PlantCard';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import Toast from '../components/Toast';
+import { useUserAuth } from '../../hooks/UserAuth';
 
 export default function AdminHome({ api }) {
   const navigate = useNavigate();
@@ -8,6 +12,18 @@ export default function AdminHome({ api }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+
+  const { authMessage } = useUserAuth();
+  const [showAuthToast, setShowAuthToast] = useState(false);
+  const [authToastMessage, setAuthToastMessage] = useState('');
+
+  // Capture auth message when it appears
+  useEffect(() => {
+    if (authMessage && !showAuthToast) {
+      setAuthToastMessage(authMessage);
+      setShowAuthToast(true);
+    }
+  }, [authMessage, showAuthToast]);
 
   useEffect(() => {
     if (!api) {
@@ -44,7 +60,8 @@ export default function AdminHome({ api }) {
     }
   };
 
-  return (
+  return (<>
+    <Header />
     <div className="min-h-screen bg-gradient-to-r from-blue-400 via-green-300 to-teal-500 p-6">
       <div className="max-w-7xl mx-auto text-white">
         <div className="flex items-center justify-between">
@@ -93,6 +110,16 @@ export default function AdminHome({ api }) {
           </div>
         ))}
       </div>
+      {showAuthToast && (
+        <Toast
+          message={authToastMessage}
+          type="error"
+          onClose={() => setShowAuthToast(false)}
+          duration={10000}
+        />
+      )}
     </div>
+    <Footer />
+  </>
   );
 }

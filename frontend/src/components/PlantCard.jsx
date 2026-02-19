@@ -36,7 +36,7 @@ const PlantCard = ({ id, image, localName, scientificName, description, actions 
       <div className="p-4 text-white">
         <h2 className="text-xl font-semibold">{localName}</h2>
         <h3 className="text-sm italic text-gray-200">{scientificName}</h3>
-        <p className="mt-2 text-sm text-gray-100">{description}</p>
+        {/* <p className="mt-2 text-sm text-gray-100">{description}</p> */}
       </div>
     </div>
   );

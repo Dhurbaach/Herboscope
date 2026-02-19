@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const userSchema = new mongoose.Schema({
-    username: {
+    fullName: {
         type: String,
         required: true,
         trim: true,
@@ -12,19 +12,18 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
-        trim: true,
-        validate: {
-            validator: function (email) {
-                return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
-            },
-            message: "Please enter a valid email address"
-        }
+        trim: true
     },
     password: {
         type: String,
         required: true,
         minlength: 6,
         select: false
+    },
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
     }
 })
 // Hash password before saving

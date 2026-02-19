@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { useUserAuth } from '../../hooks/UserAuth';
 
 const ApiResponse = () => {
+    const {authmessage}=useUserAuth;
     const location = useLocation();
     const navigate = useNavigate();
     const [plantData, setPlantData] = useState(null);

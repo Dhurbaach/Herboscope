@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useUserAuth } from '../../hooks/UserAuth';
 import { EmailIcon, PhoneIcon, LocationIcon } from '../components/Icons';
+import Toast from '../components/Toast';
 
 export default function Contact() {
+  // Check authentication
+  const { authMessage } = useUserAuth();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -11,6 +16,16 @@ export default function Contact() {
 
   const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showAuthToast, setShowAuthToast] = useState(false);
+  const [authToastMessage, setAuthToastMessage] = useState('');
+
+  // Capture auth message when it appears
+  useEffect(() => {
+    if (authMessage && !showAuthToast) {
+      setAuthToastMessage(authMessage);
+      setShowAuthToast(true);
+    }
+  }, [authMessage, showAuthToast]);
 
   // Auto-fill name and email from logged-in user
   useEffect(() => {
@@ -18,9 +33,20 @@ export default function Contact() {
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const user = JSON.parse(userStr);
+        
+        // Safely extract name
+        let displayName = '';
+        if (user.fullName) {
+          displayName = user.fullName;
+        } else if (user.username) {
+          displayName = user.username.charAt(0).toUpperCase() + user.username.slice(1).toLowerCase();
+        } else if (user.name) {
+          displayName = user.name.charAt(0).toUpperCase() + user.name.slice(1).toLowerCase();
+        }
+        
         setFormData(prev => ({
           ...prev,
-          name: user.username[0].toUpperCase() + user.username.slice(1).toLowerCase() || user.name[0].toUpperCase() + user.name.slice(1).toLowerCase() || '',
+          name: displayName,
           email: user.email || ''
         }));
       }
@@ -215,6 +241,16 @@ export default function Contact() {
           </div>
         </div>
       </div>
+
+      {/* Auth Error Toast */}
+      {showAuthToast && (
+        <Toast
+          message={authToastMessage}
+          type="error"
+          onClose={() => setShowAuthToast(false)}
+          duration={10000}
+        />
+      )}
     </div>
   );
 }

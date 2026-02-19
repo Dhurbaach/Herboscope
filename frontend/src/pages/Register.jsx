@@ -1,31 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import Layout from '../layouts/AuthLayout';
+import Input from '../components/Input/Input';
+import Toast from '../components/Toast';
+import { UserContext } from '../components/context/userContext';
 
 const Register = () => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
+  const { updateUser } = useContext(UserContext);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     // Basic client-side validation
-    if (!formData.email.includes('@gmail.com')) {
-      setError('Please enter a valid Gmail address');
+    if (!email || !password) {
+      setError("Please fill in all fields");
       return;
     }
-    if (formData.password !== formData.confirmPassword) {
+
+    //check if password is at least 8 characters long
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+    if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
@@ -33,103 +50,112 @@ const Register = () => {
     try {
       setLoading(true);
       const payload = {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
+        fullName,
+        email,
+        password,
+        role,
       };
       const res = await api.post('/register', payload);
-      // If backend returns a token, do NOT auto-login here — require explicit sign-in for clarity/security.
-      alert('Registration successful! Please sign in.');
-      navigate('/login');
-    } catch (err) {
-      console.error('Registration error:', err);
-      const message = err?.response?.data?.error || err?.response?.data?.message || err.message || 'Registration failed';
-      setError(message);
+      const { token, user } = res.data;
+      if (token) {
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        updateUser(user); // Update context
+        window.dispatchEvent(new Event('authChanged'));
+        
+        // Show success toast
+        setShowSuccessToast(true);
+        
+        // Navigate after a short delay so user sees the toast
+        setTimeout(() => {
+          navigate('/');
+        }, 2000);
+      }
+    } catch (error) {
+      if (error.response && error.response.data.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("An error occurred. Please try again later.");
+      }
     } finally {
       setLoading(false);
     }
-  }; 
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-400 via-green-300 to-teal-500 flex items-center justify-center p-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white/10 backdrop-blur-lg border border-white/30 shadow-xl rounded-2xl p-8 w-full max-w-md text-white"
-      >
-        <h2 className="text-3xl font-bold mb-6 text-center">Create Account</h2>
+    <Layout>
+      <div className='lg:w-[100%] h-auto md:h-full mt-4 md:mt-9 flex flex-col justify-center'>
+        <h3 className='text-xl font-semibold text-black'>Create an Account</h3>
+        <p className='text-xs text-slate-700 mt-[5px] mb-5'>
+          Join us today by entering your details below.
+        </p>
+        <form onSubmit={handleSubmit}>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-1'>
+            <Input
+              type="text"
+              placeholder="John Doe"
+              value={fullName}
+              onChange={({ target }) => setFullName(target.value)}
+              label="Full Name"
+            />
+            <Input
+              type="text"
+              name="email"
+              placeholder="abc@gmail.com"
+              value={email}
+              onChange={({ target }) => setEmail(target.value)}
+              label="Email Address"
+            />
+            <div>
+              <label className='text-[13px] text-slate-800'>Role</label>
+              <div className='input-box'>
+                <select
+                  className='w-full bg-transparent outline-none'
+                  value={role}
+                  onChange={({ target }) => setRole(target.value)}
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+            </div>
+            <div className='col-span-2'>
+              <Input
+                type="password"
+                placeholder="Min 8 characters"
+                name="password"
+                value={password}
+                onChange={({ target }) => setPassword(target.value)}
+                label="Password"
+              />
+              <Input
+                type="password"
+                placeholder="Confirm your password"
+                name="confirmPassword"
+                value={confirmPassword}
+                onChange={({ target }) => setConfirmPassword(target.value)}
+                label="Confirm Password"
+              />
+            </div>
+          </div>
+          {error && <p className='text-red-500 text-xs pb-2.5'>{error}</p>}
+          <button type='submit' className='btn-primary'>SIGN UP</button>
+          <p className='text-[13px] text-slate-800 mt-3'>
+            Already have an account? {" "}
+            <Link className='font-medium text-primary underline' to="/login">Login</Link>
+          </p>
 
-        <label className="block mb-3">
-          <span className="text-sm">Username</span>
-          <input
-            type="text"
-            name="username"
-            required
-            value={formData.username}
-            onChange={handleChange}
-            className="mt-1 w-full px-4 py-2 bg-white/20 border border-white/30 rounded-md backdrop-blur text-white placeholder-gray-200 focus:outline-none focus:ring-2 focus:ring-green-200"
-            placeholder="Enter your username"
-          />
-        </label>
-
-        <label className="block mb-3">
-          <span className="text-sm">Gmail</span>
-          <input
-            type="email"
-            name="email"
-            required
-            value={formData.email}
-            onChange={handleChange}
-            className="mt-1 w-full px-4 py-2 bg-white/20 border border-white/30 rounded-md backdrop-blur text-white placeholder-gray-200 focus:outline-none focus:ring-2 focus:ring-green-200"
-            placeholder="Enter your Gmail"
-          />
-        </label>
-
-        <label className="block mb-3">
-          <span className="text-sm">Password</span>
-          <input
-            type="password"
-            name="password"
-            required
-            value={formData.password}
-            onChange={handleChange}
-            className="mt-1 w-full px-4 py-2 bg-white/20 border border-white/30 rounded-md backdrop-blur text-white placeholder-gray-200 focus:outline-none focus:ring-2 focus:ring-green-200"
-            placeholder="Enter password"
-          />
-        </label>
-
-        <label className="block mb-5">
-          <span className="text-sm">Confirm Password</span>
-          <input
-            type="password"
-            name="confirmPassword"
-            required
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            className="mt-1 w-full px-4 py-2 bg-white/20 border border-white/30 rounded-md backdrop-blur text-white placeholder-gray-200 focus:outline-none focus:ring-2 focus:ring-green-200"
-            placeholder="Confirm password"
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full ${loading ? 'bg-green-300' : 'bg-green-500 hover:bg-green-600'} transition-all duration-300 py-2 px-4 rounded-lg font-semibold text-white`}
-        >
-          {loading ? 'Registering...' : 'Register'}
-        </button>
-        {error && <p className="mt-3 text-sm text-red-600 text-center">{error}</p>}
-        <p className="mt-4 text-sm text-white text-center">
-  Already have an account?{' '}
-  <Link
-    to="/login"
-    className="text-green-200 hover:underline font-medium"
-  >
-    Sign in here
-  </Link>
-</p>
-
-      </form>
-    </div>
+        </form>
+      </div>
+      {showSuccessToast && (
+        <Toast
+          message="Registration successful! Redirecting..."
+          type="success"
+          onClose={() => setShowSuccessToast(false)}
+          duration={1500}
+        />
+      )}
+    </Layout>
   );
 };
 

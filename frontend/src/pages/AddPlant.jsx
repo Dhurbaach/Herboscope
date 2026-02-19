@@ -19,6 +19,9 @@ export default function AddPlant() {
     const [isLoading, setIsLoading] = useState(false);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
+    const [toastType, setToastType] = useState('success');
+    const [showErrorToast, setShowErrorToast] = useState(false);
+    const [errorToastMessage, setErrorToastMessage] = useState('');
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -34,11 +37,13 @@ export default function AddPlant() {
         e.preventDefault();
 
         if (!formData.plantName) {
-            alert('Please enter plant name');
+            setErrorToastMessage('Please enter plant name');
+            setShowErrorToast(true);
             return;
         }
         if (!formData.photo) {
-            alert('Please add a photo');
+            setErrorToastMessage('Please add a photo');
+            setShowErrorToast(true);
             return;
         }
 
@@ -65,6 +70,7 @@ export default function AddPlant() {
             
             // Show success toast
             setToastMessage('Plant added successfully!');
+            setToastType('success');
             setShowToast(true);
             
             // Navigate to plant detail page after a short delay
@@ -77,7 +83,8 @@ export default function AddPlant() {
             }, 1500);
         } catch (err) {
             console.error('Error adding plant:', err);
-            alert('Failed to add plant. Please try again.');
+            setErrorToastMessage('Failed to add plant. Please try again.');
+            setShowErrorToast(true);
         } finally {
             setIsLoading(false);
         }
@@ -188,13 +195,23 @@ export default function AddPlant() {
                 </form>
             </div>
             
-            {/* Toast Notification */}
+            {/* Success Toast Notification */}
             {showToast && (
                 <Toast
                     message={toastMessage}
-                    type="success"
+                    type={toastType}
                     onClose={() => setShowToast(false)}
-                    duration={1500}
+                    duration={2000}
+                />
+            )}
+            
+            {/* Error Toast Notification */}
+            {showErrorToast && (
+                <Toast
+                    message={errorToastMessage}
+                    type="error"
+                    onClose={() => setShowErrorToast(false)}
+                    duration={3000}
                 />
             )}
         </div>

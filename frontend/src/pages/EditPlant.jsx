@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../utils/api';
+import Toast from '../components/Toast';
 import { PlantIcon, LoadingIcon, SuccessIcon } from '../components/Icons';
 
 const EditPlant = () => {
@@ -15,12 +16,15 @@ const EditPlant = () => {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showErrorToast, setShowErrorToast] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
     if (!id) {
-      setError('Missing plant id');
+      setErrorMessage('Missing plant id');
+      setShowErrorToast(true);
       setLoading(false);
       return;
     }
@@ -37,7 +41,8 @@ const EditPlant = () => {
           image: data.image || '',
         });
       } catch (err) {
-        setError(err.message || 'Failed to fetch plant data');
+        setErrorMessage(err.message || 'Failed to fetch plant data');
+        setShowErrorToast(true);
       } finally {
         setLoading(false);
       }
@@ -56,7 +61,7 @@ const EditPlant = () => {
     if (!id) return;
 
     setSaving(true);
-    setError(null);
+    setErrorMessage(null);
     try {
       await api.patch(`/home/${id}`, {
         plantName: formData.plantName,
@@ -65,8 +70,15 @@ const EditPlant = () => {
         description: formData.description,
       });
       setSuccessMessage('Plant updated successfully!');
+      setShowSuccessToast(true);
+      
+      // Navigate after showing success toast
+      setTimeout(() => {
+        navigate(-1);
+      }, 1500);
     } catch (err) {
-      setError(err.message || 'Failed to update plant');
+      setErrorMessage(err.message || 'Failed to update plant');
+      setShowErrorToast(true);
     } finally {
       setSaving(false);
     }
@@ -87,18 +99,6 @@ const EditPlant = () => {
           <h1 className="text-4xl font-bold text-green-800 mb-2">Edit Plant</h1>
           <p className="text-gray-600">Update plant information</p>
         </div>
-
-        {successMessage && (
-          <div className="mb-6 p-4 bg-green-100 border-l-4 border-green-600 text-green-700 rounded">
-            {successMessage}
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-100 border-l-4 border-red-600 text-red-700 rounded">
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-8">
           <div className="mb-8">
@@ -195,6 +195,26 @@ const EditPlant = () => {
           </div>
         </form>
       </div>
+      
+      {/* Success Toast */}
+      {showSuccessToast && (
+        <Toast
+          message={successMessage}
+          type="success"
+          onClose={() => setShowSuccessToast(false)}
+          duration={1500}
+        />
+      )}
+      
+      {/* Error Toast */}
+      {showErrorToast && (
+        <Toast
+          message={errorMessage}
+          type="error"
+          onClose={() => setShowErrorToast(false)}
+          duration={3000}
+        />
+      )}
     </div>
   );
 };
