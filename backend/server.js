@@ -40,11 +40,13 @@ app.use('/uploads', express.static(uploadsDir));
 
 const plantRoutes = require('./routes/plantRoute');
 const userRoutes = require('./routes/userRoute');
+const inquiryRoutes = require('./routes/inquiryRoute');
 
 
 app.use(express.json());
 app.use('/', plantRoutes);
 app.use('/', userRoutes);
+app.use('/inquiries', inquiryRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Hello from backend!' });

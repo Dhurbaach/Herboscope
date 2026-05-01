@@ -86,31 +86,31 @@ const EditPlant = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center">
-        <LoadingIcon className="w-10 h-10 text-green-600 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingIcon className="w-10 h-10 text-cyan-200 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 p-6">
+    <div className="min-h-screen p-6">
       <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-green-800 mb-2">Edit Plant</h1>
-          <p className="text-gray-600">Update plant information</p>
+        <div className="text-center mb-8 glass-panel p-8 text-white">
+          <h1 className="page-title mb-2">Edit Plant</h1>
+          <p className="page-subtitle">Update plant information</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-8">
+        <form onSubmit={handleSubmit} className="glass-panel p-8 text-white">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Plant Photo</h2>
+            <h2 className="text-2xl font-bold text-slate-50 mb-4">Plant Photo</h2>
             {formData.image ? (
               <img
                 src={formData.image}
                 alt={formData.plantName || 'Plant'}
-                className="w-full max-h-80 rounded-lg object-cover border-2 border-green-300"
+                className="w-full max-h-80 rounded-xl object-cover border border-white/10"
               />
             ) : (
-              <div className="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center text-gray-500">
+              <div className="rounded-xl border border-dashed border-white/15 p-6 text-center text-slate-200/70">
                 No image available
               </div>
             )}
@@ -118,49 +118,49 @@ const EditPlant = () => {
 
           <div className="space-y-6">
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Plant Name</label>
+              <label className="block text-slate-100 font-semibold mb-2">Plant Name</label>
               <input
                 type="text"
                 name="plantName"
                 value={formData.plantName}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-200 transition"
+                className="glass-input"
               />
             </div>
 
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Scientific Name</label>
+              <label className="block text-slate-100 font-semibold mb-2">Scientific Name</label>
               <input
                 type="text"
                 name="scientificName"
                 value={formData.scientificName}
                 onChange={handleInputChange}
                 placeholder="e.g., Ocimum tenuiflorum"
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-200 transition"
+                className="glass-input"
               />
             </div>
 
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Description</label>
+              <label className="block text-slate-100 font-semibold mb-2">Description</label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
                 placeholder="Describe the plant, its appearance, habitat, and characteristics..."
                 rows={4}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-200 transition resize-none"
+                className="glass-input resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Uses & Benefits</label>
+              <label className="block text-slate-100 font-semibold mb-2">Uses & Benefits</label>
               <textarea
                 name="uses"
                 value={formData.uses}
                 onChange={handleInputChange}
                 placeholder="List medicinal uses, culinary applications, and health benefits..."
                 rows={4}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-200 transition resize-none"
+                className="glass-input resize-none"
               />
             </div>
           </div>
@@ -170,7 +170,7 @@ const EditPlant = () => {
               type="submit"
               disabled={saving}
               className={`flex-1 px-4 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
-                saving ? 'bg-gray-400 text-green-600 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'
+                saving ? 'bg-white/10 text-slate-300 cursor-not-allowed border border-white/10' : 'glass-button'
               }`}
             >
               {saving ? (
@@ -188,7 +188,7 @@ const EditPlant = () => {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="px-4 py-3 bg-red-400 text-gray-800 rounded-lg hover:bg-gray-300 transition font-semibold"
+              className="px-4 py-3 glass-button-secondary font-semibold"
             >
               Cancel
             </button>

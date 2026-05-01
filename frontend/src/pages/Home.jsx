@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import PlantCard from '../components/PlantCard';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import PlantRecognize from './PlantRecognize';
+
 
 export default function Home({ api }) {
   const navigate = useNavigate();
@@ -50,36 +52,31 @@ export default function Home({ api }) {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-gradient-to-r from-blue-400 via-orange-300 to-red-400 p-6">
-        <div className="max-w-7xl mx-auto text-white text-center mb-6 relative">
-          <h1 className="text-4xl font-bold">Welcome to Herboscope</h1>
-          <p className="mt-2 text-lg">Explore medicinal plants and their uses</p>
+      <div className="min-h-screen p-3">
+        <div className="max-w-7xl mx-auto text-white text-center mb-8 relative ">
+          <div className="glass-panel p-8 md:p-12 rounded-2xl">
+            <h1 className="page-title">Welcome to Herboscope</h1>
+            <p className="mt-3 text-base md:text-lg page-subtitle">Explore medicinal plants and their uses</p>
 
-          {/* Recognize Button - Top Right */}
-          <button
-            onClick={() => navigate('/recognize')}
-            className="absolute top-0 right-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg shadow-lg transition-all duration-300 flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            Recognize Plant
-          </button>
+           
+              <PlantRecognize api={api} />
+            
+          </div>
         </div>
 
         {/* Loading / Error Messages */}
         <div className="max-w-6xl mx-auto mb-6 text-center text-white">
-          {loading && <div className="text-yellow-200">Loading plants from backend...</div>}
-          {error && <div className="text-red-200">Error loading plants: {error}</div>}
+          {loading && <div className="glass-card px-4 py-3 inline-block text-cyan-100">Loading plants from backend...</div>}
+          {error && <div className="glass-card px-4 py-3 inline-block text-rose-100">Error loading plants: {error}</div>}
         </div>
 
         {/* Sorting Dropdown */}
         <div className="max-w-6xl mx-auto mb-6 text-right">
-          <label className="mr-2 font-semibold text-white">Sort by:</label>
+          <label className="mr-2 font-semibold text-slate-100">Sort by:</label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-1 py-0.5 rounded-lg text-black"
+            className="glass-select w-auto inline-block text-sm"
           >
             <option value="name_asc">A → Z</option>
             <option value="name_desc">Z → A</option>
@@ -87,7 +84,7 @@ export default function Home({ api }) {
         </div>
 
         {/* Plant Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 max-w-7xl mx-auto">
           {sortedPlants.map((plant, index) => (
             <PlantCard key={index} {...plant} />
           ))}

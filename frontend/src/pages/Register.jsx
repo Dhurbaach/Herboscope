@@ -56,20 +56,16 @@ const Register = () => {
         role,
       };
       const res = await api.post('/register', payload);
-      const { token, user } = res.data;
-      if (token) {
+      const { token, user, newUser } = res.data;
+      const resolvedUser = user || newUser;
+      if (token && resolvedUser) {
         localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        updateUser(user); // Update context
+        localStorage.setItem('user', JSON.stringify(resolvedUser));
+        updateUser(resolvedUser); // Update context
         window.dispatchEvent(new Event('authChanged'));
         
-        // Show success toast
-        setShowSuccessToast(true);
-        
-        // Navigate after a short delay so user sees the toast
-        setTimeout(() => {
-          navigate('/');
-        }, 2000);
+        // Navigate immediately so header shows logged-in state
+        navigate('/');
       }
     } catch (error) {
       if (error.response && error.response.data.message) {
@@ -84,9 +80,9 @@ const Register = () => {
 
   return (
     <Layout>
-      <div className='lg:w-[100%] h-auto md:h-full mt-4 md:mt-9 flex flex-col justify-center'>
-        <h3 className='text-xl font-semibold text-black'>Create an Account</h3>
-        <p className='text-xs text-slate-700 mt-[5px] mb-5'>
+      <div className='lg:w-[100%] h-auto md:h-full mt-4 md:mt-9 flex flex-col justify-center text-white'>
+        <h3 className='text-xl font-semibold text-slate-50'>Create an Account</h3>
+        <p className='text-xs text-slate-200/75 mt-[5px] mb-5'>
           Join us today by entering your details below.
         </p>
         <form onSubmit={handleSubmit}>
@@ -107,15 +103,15 @@ const Register = () => {
               label="Email Address"
             />
             <div>
-              <label className='text-[13px] text-slate-800'>Role</label>
+              <label className='text-[13px] text-slate-200/80'>Role</label>
               <div className='input-box'>
                 <select
-                  className='w-full bg-transparent outline-none'
+                  className='w-full bg-transparent outline-none text-slate-100'
                   value={role}
                   onChange={({ target }) => setRole(target.value)}
                 >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
+                  <option value="user" className='text-slate-100 bg-gray-600'>User</option>
+                  <option value="admin" className='text-slate-100 bg-gray-600'>Admin</option>
                 </select>
               </div>
             </div>
@@ -140,9 +136,9 @@ const Register = () => {
           </div>
           {error && <p className='text-red-500 text-xs pb-2.5'>{error}</p>}
           <button type='submit' className='btn-primary'>SIGN UP</button>
-          <p className='text-[13px] text-slate-800 mt-3'>
+          <p className='text-[13px] text-slate-200/75 mt-3'>
             Already have an account? {" "}
-            <Link className='font-medium text-primary underline' to="/login">Login</Link>
+            <Link className='font-medium text-cyan-200 underline' to="/login">Login</Link>
           </p>
 
         </form>

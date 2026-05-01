@@ -74,12 +74,12 @@ export default function Signin() {
     };
     return (
         <Layout>
-            <div className="lg:w-[70%] h-auto md:h-full mt-10 md:mt-0 flex flex-col justify-center">
-                <h3 className="text-xl font-semibold text-black">Welcome Back</h3>
-                <p className="text-xs text-slate-700 mt-[5px] mb-6">
+            <div className="w-full max-w-md mx-auto h-auto md:h-full mt-8 md:mt-0 flex flex-col justify-center items-center text-white text-center">
+                <h3 className="text-xl font-semibold text-slate-50">Welcome Back</h3>
+                <p className="text-xs text-slate-200/75 mt-[5px] mb-6 max-w-sm">
                     Please enter your details to login to your account.
                 </p>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4 text-left">
                     <Input
                         type="email"
                         name="email"
@@ -98,9 +98,9 @@ export default function Signin() {
                     />
                     {error && <p className='text-red-500 text-xs pb-2.5'>{error}</p>}
                     <button type='submit' className='btn-primary'>LOGIN</button>
-                    <p className='text-[13px] text-slate-800 mt-3'>
+                    <p className='text-[13px] text-slate-200/75 mt-3 text-center'>
                         Don't have an account? {" "}
-                        <Link className='font-medium text-primary underline' to="/register">Register</Link>
+                        <Link className='font-medium text-cyan-200 underline' to="/register">Register</Link>
                     </p>
 
                 </form>

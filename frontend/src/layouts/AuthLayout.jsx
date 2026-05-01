@@ -1,45 +1,19 @@
-import CARD_2 from '../../src/assets/CARD_2.webp'
-import { PlantIcon } from '../components/Icons';
-
 const AuthLayout = ({ children }) => {
     return (
-        <div className='flex'>
-            <div className="w-screen h-screen md:w-[60vw] px-10 pt-5 pb-12">
-                <h2 className="text-lg font-medium text-black">Herboscope</h2>
-                {children}
-            </div>
-            <div className='hidden md:block w-[40vw] h-screen bg-violet-50 bg-auth-bg-img bg-cover bg-no-repeat bg-center overflow-hidden p-8 relative'>
-                <div className='w-48 h-48 rounded-[40px] bg-purple-600 absolute -top-7 -left-5'></div>
-                <div className='w-48 h-56 rounded-[40px] border-[20px] border-fuchsia-600 absolute -top-[11%] -right-11'></div>
-                <div className='w-48 h-48 rounded-[40px] bg-violet-500 absolute -bottom-7 -left-5'></div>
+        <div className='min-h-screen flex items-center justify-center px-4 py-8 text-white relative overflow-hidden'>
+            <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.20),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.18),_transparent_28%),radial-gradient(circle_at_bottom,_rgba(168,85,247,0.15),_transparent_30%),linear-gradient(135deg,_#06111f_0%,_#0a1a2b_38%,_#10263d_72%,_#18344c_100%)]'></div>
+            <div className='absolute top-10 left-10 w-52 h-52 rounded-full bg-cyan-400/10 blur-3xl'></div>
+            <div className='absolute bottom-10 right-10 w-72 h-72 rounded-full bg-emerald-400/10 blur-3xl'></div>
 
-                <div className='grid grid-cols-1 z-20'>
-                    <StatsInfoCard
-                        icon={<PlantIcon className="w-8 h-8 text-white" />}
-                        label="Know natural medicines around you"
-                        color="bg-primary"
-                    />
+            <div className='relative z-10 w-full max-w-2xl glass-panel p-6 sm:p-8 md:p-10'>
+                <div className="mb-6 text-center">
+                    <h2 className="text-lg font-semibold tracking-wide bg-gradient-to-r from-cyan-300 via-emerald-300 to-teal-200 bg-clip-text text-transparent">Herboscope</h2>
+                    <p className="mt-2 text-sm text-slate-200/75">A modern herbal companion for plant discovery and recognition</p>
                 </div>
-                <img
-                    src={CARD_2}
-                    alt="Card 2"
-                    className="w-64 lg:w-[90%] absolute bottom-10 shadow-lg shadow-blue-400/15"
-                />
+                {children}
             </div>
         </div>
     )
 }
 
 export default AuthLayout;
-
-const StatsInfoCard = ({ icon, label, color }) => {
-    return (<div className='flex gap-6 bg-white p-4 rounded-xl shadow-md shadow-purple-400/10 border border-gray-200/50 z-20'>
-        <div className={`w-12 h-12 flex items-center justify-center text-[26px] text-white ${color} rounded-full drop-shadow-xl`}>
-            {icon}
-        </div>
-        <div className="flex flex-col">
-            <h6 className=' text-xs text-gray-500 mb-1'>{label}</h6>
-        </div>
-    </div>
-    )
-}

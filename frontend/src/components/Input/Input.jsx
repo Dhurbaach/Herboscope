@@ -9,12 +9,12 @@ const Input = ({value,placeholder,label,type,name,onChange}) => {
     }
   return (
     <div>
-       <label className='text-[13px] text-slate-800'>{label}</label>
+       <label className='text-[13px] text-slate-200/80'>{label}</label>
        <div className='input-box'>
         <input
         type={type==="password" ? showPassword ? "text" : "password" : type}
         placeholder={placeholder}
-        className='w-full bg-transparent outline-none'
+        className='w-full bg-transparent outline-none text-slate-100 placeholder:text-slate-300/60'
         value={value}
         onChange={onChange} //Just pass the onChange prop
         />
@@ -22,9 +22,9 @@ const Input = ({value,placeholder,label,type,name,onChange}) => {
         {type==="password" && (
             <>
             {showPassword ? (
-                <FaRegEyeSlash size={22} className='text-primary cursor-pointer' onClick={toggleShowPassword} />
+              <FaRegEyeSlash size={22} className='text-cyan-200 cursor-pointer' onClick={toggleShowPassword} />
             ) : (
-                <FaRegEye size={22} className='text-gray-500 cursor-pointer' onClick={toggleShowPassword} />
+              <FaRegEye size={22} className='text-slate-300 cursor-pointer' onClick={toggleShowPassword} />
             )}
             
             </>)}

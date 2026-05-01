@@ -68,14 +68,16 @@ router.post('/register', async (req, res) => {
         const newUser = new User({ fullName, email, password, role: normalizedRole });
         await newUser.save();
 
+        const safeUser = {
+            id: newUser._id,
+            fullName: newUser.fullName,
+            email: newUser.email,
+            role: newUser.role,
+        };
+
         res.status(201).json({
             id: newUser._id,
-            newUser: {
-                id: newUser._id,
-                fullName: newUser.fullName,
-                email: newUser.email,
-                role: newUser.role,
-            },
+            user: safeUser,
             token: generateToken(newUser._id)
         });
     } catch (err) {

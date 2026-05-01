@@ -17,7 +17,7 @@ const PlantCard = ({ id, image, localName, scientificName, description, actions 
   return (
     <div 
       onClick={handleClick}
-      className="bg-blue-300 backdrop-blur-md border border-white/30 rounded-2xl shadow-lg overflow-hidden transition-all hover:shadow-2xl cursor-pointer hover:scale-105 relative"
+      className="glass-card overflow-hidden transition-all hover:shadow-2xl cursor-pointer hover:scale-[1.03] relative"
     >
       {actions ? (
         <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
@@ -34,8 +34,8 @@ const PlantCard = ({ id, image, localName, scientificName, description, actions 
         className="w-full h-48 object-fill"
       />
       <div className="p-4 text-white">
-        <h2 className="text-xl font-semibold">{localName}</h2>
-        <h3 className="text-sm italic text-gray-200">{scientificName}</h3>
+        <h2 className="text-xl font-semibold text-slate-50">{localName}</h2>
+        <h3 className="text-sm italic text-cyan-100/75">{scientificName}</h3>
         {/* <p className="mt-2 text-sm text-gray-100">{description}</p> */}
       </div>
     </div>

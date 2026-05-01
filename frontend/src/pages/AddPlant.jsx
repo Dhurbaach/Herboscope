@@ -91,15 +91,15 @@ export default function AddPlant() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 p-6">
+        <div className="min-h-screen p-6">
             <div className="max-w-3xl mx-auto">
                 {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-green-800 mb-2">Add New Plant</h1>
-                    <p className="text-gray-600">Contribute to our plant database by sharing plant information and photos</p>
+                <div className="text-center mb-8 glass-panel p-8 text-white">
+                    <h1 className="page-title mb-2">Add New Plant</h1>
+                    <p className="page-subtitle">Contribute to our plant database by sharing plant information and photos</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-8">
+                <form onSubmit={handleSubmit} className="glass-panel p-8 text-white">
                     <PlantPhotoSelector
                         photo={formData.photo}
                         photoPreview={formData.photoPreview}
@@ -110,54 +110,54 @@ export default function AddPlant() {
                     <div className="space-y-6">
                         {/* Plant Name */}
                         <div>
-                            <label className="block text-gray-700 font-semibold mb-2">Plant Name *</label>
+                            <label className="block text-slate-100 font-semibold mb-2">Plant Name *</label>
                             <input
                                 type="text"
                                 name="plantName"
                                 value={formData.plantName}
                                 onChange={handleInputChange}
                                 placeholder="e.g., Tulsi, Neem, Mint"
-                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-200 transition"
+                                className="glass-input"
                                 required
                             />
                         </div>
 
                         {/* Scientific Name */}
                         <div>
-                            <label className="block text-gray-700 font-semibold mb-2">Scientific Name</label>
+                            <label className="block text-slate-100 font-semibold mb-2">Scientific Name</label>
                             <input
                                 type="text"
                                 name="scientificName"
                                 value={formData.scientificName}
                                 onChange={handleInputChange}
                                 placeholder="e.g., Ocimum tenuiflorum"
-                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-200 transition"
+                                className="glass-input"
                             />
                         </div>
 
                         {/* Description */}
                         <div>
-                            <label className="block text-gray-700 font-semibold mb-2">Description</label>
+                            <label className="block text-slate-100 font-semibold mb-2">Description</label>
                             <textarea
                                 name="description"
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 placeholder="Describe the plant, its appearance, habitat, and characteristics..."
                                 rows={4}
-                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-200 transition resize-none"
+                                className="glass-input resize-none"
                             />
                         </div>
 
                         {/* Uses and Benefits */}
                         <div>
-                            <label className="block text-gray-700 font-semibold mb-2">Uses & Benefits</label>
+                            <label className="block text-slate-100 font-semibold mb-2">Uses & Benefits</label>
                             <textarea
                                 name="uses"
                                 value={formData.uses}
                                 onChange={handleInputChange}
                                 placeholder="List medicinal uses, culinary applications, and health benefits..."
                                 rows={4}
-                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-200 transition resize-none"
+                                className="glass-input resize-none"
                             />
                         </div>
                     </div>
@@ -167,9 +167,9 @@ export default function AddPlant() {
                         <button
                             type="submit"
                             disabled={isLoading || !formData.photo}
-                            className={`flex-1 px-4 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${isLoading || !formData.photo
-                                ? 'bg-gray-400 text-green-600 cursor-not-allowed'
-                                : 'bg-green-600 text-white hover:bg-green-700'
+                            className={`flex-1 px-4 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 ${isLoading || !formData.photo
+                                ? 'bg-white/10 text-slate-300 cursor-not-allowed border border-white/10'
+                                : 'glass-button'
                                 }`}
                         >
                             {isLoading ? (
@@ -187,7 +187,7 @@ export default function AddPlant() {
                         <button
                             type="button"
                             onClick={() => window.history.back()}
-                            className="px-4 py-3 bg-red-400 text-gray-800 rounded-lg hover:bg-gray-300 transition font-semibold"
+                            className="px-4 py-3 glass-button-secondary font-semibold"
                         >
                             Cancel
                         </button>
