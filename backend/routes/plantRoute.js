@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const Plant = require('../models/plantModel');
 const upload=require("../uploadMiddleware");
-const fetch = require('node-fetch');
 const FormData = require('form-data');
 const multer = require('multer');
 const axios = require('axios');
@@ -124,35 +123,77 @@ router.post('/home/addPlant', async (req, res) => {
   }
 });
 
-//route to call plantnet api for plant recognition
+// route to send the image to our AI model for plant recognition
 router.post('/identify', uploadIdentify.single("image"), async (req, res) => {
   try {
     const organ = req.body.organ || "auto";
     if (!req.file) {
-      return res.status(400).json({ message: 'Image and organ are required' });
+      return res.status(400).json({
+        message: 'Image is required for plant identification',
+        success: false,
+      });
     }
 
-    // Call PlantNet API
-    const formData = new FormData();
-    formData.append('organs', organ);
-    formData.append('images', req.file.buffer, req.file.originalname);
+    const aiModelUrl = process.env.AI_MODEL_API_URL || 'http://127.0.0.1:5000/predict';
+    if (!process.env.AI_MODEL_API_URL) {
+      console.log(`AI_MODEL_API_URL is not set, using default local model endpoint: ${aiModelUrl}`);
+    }
 
-    const response = await fetch(`https://my-api.plantnet.org/v2/identify/all?api-key=${process.env.PLANTNET_API_KEY}`, {
-      method: 'POST',
-      body: formData,
-      headers: formData.getHeaders(),
+    // Forward the upload to the AI model service
+    const formData = new FormData();
+    formData.append('organ', organ);
+    formData.append('image', req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype,
     });
 
-    if (!response.ok) {
-      throw new Error(`PlantNet API error: ${response.statusText}`);
-    }
+    const response = await axios.post(aiModelUrl, formData, {
+      headers: formData.getHeaders(),
+      timeout: 60000,
+    });
 
-    const data = await response.json();
-    console.log('PlantNet response:', data);
-    res.json(data);
+    const data = response.data || {};
+    const prediction = data.prediction || data.result || data;
+    const plantName = prediction.plant_name || prediction.label || prediction.name || data.plant_name || data.label || '';
+    const confidence = typeof prediction.confidence === 'number'
+      ? prediction.confidence
+      : typeof prediction.score === 'number'
+        ? prediction.score
+        : typeof data.confidence === 'number'
+          ? data.confidence
+          : typeof data.score === 'number'
+            ? data.score
+            : null;
+    const confidencePercentage = typeof data.confidence_percentage === 'number'
+      ? data.confidence_percentage
+      : typeof data.confidence_percentage === 'string'
+        ? data.confidence_percentage
+        : confidence !== null
+          ? Number((confidence * 100).toFixed(2))
+          : null;
+    const topPredictions = prediction.top_5_predictions || data.top_5_predictions || data.all_predictions || {};
+
+    console.log('AI model response:', data);
+    res.json({
+      success: true,
+      message: 'Plant identified successfully using our AI model',
+      plant_name: plantName,
+      scientific_name: prediction.scientific_name || data.scientific_name || '',
+      confidence,
+      confidence_percentage: confidencePercentage,
+      class_index: prediction.class_index ?? data.class_index ?? null,
+      all_predictions: topPredictions,
+      top_5_predictions: topPredictions,
+      organ: data.organ || organ,
+      raw: data,
+    });
   } catch (err) {
     console.error('Error identifying plant:', err);
-    res.status(500).json({ message: 'Error identifying plant', error: err.message });
+    res.status(500).json({
+      success: false,
+      message: 'Error identifying plant with our AI model',
+      error: err.message,
+    });
   }
 });
 

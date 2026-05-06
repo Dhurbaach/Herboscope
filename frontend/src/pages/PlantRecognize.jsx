@@ -43,22 +43,32 @@ const PlantRecognize = () => {
             const data = response.data;
             console.log('Backend response:', data);
 
-            // Check if we got results from PlantNet
-            if (data.results && data.results.length > 0) {
-                const topResult = data.results[0];
-                console.log('Top match:', topResult.species.scientificNameWithoutAuthor);
-                console.log('Score:', topResult.score);
+            if (data.success !== false) {
+                const normalizedResponse = {
+                    success: true,
+                    message: data.message || 'Plant identified successfully',
+                    plant_name: data.plant_name || '',
+                    scientific_name: data.scientific_name || '',
+                    confidence: typeof data.confidence === 'number' ? data.confidence : null,
+                    confidence_percentage: data.confidence_percentage ?? (typeof data.confidence === 'number' ? (data.confidence * 100).toFixed(2) : null),
+                    all_predictions: data.all_predictions || {},
+                    organ: data.organ || 'auto',
+                    raw: data.raw || data,
+                };
 
-                // Navigate to results page with response data and uploaded image
-                navigate('/api-response', { state: { response: data, photoPreview } });
+                setSuccessToastMessage(normalizedResponse.message);
+                setShowSuccessToast(true);
+
+                // Navigate to results page with normalized response and uploaded image
+                navigate('/api-response', { state: { response: normalizedResponse, photoPreview } });
             } else {
-                setErrorToastMessage('No plant matches found. Try a different image or angle.');
+                setErrorToastMessage(data.message || 'No plant match found. Try a different image or angle.');
                 setShowErrorToast(true);
             }
         } catch (err) {
             console.error('Error recognizing plant:', err);
             const errorMsg = err?.response?.data?.message || err.message || 'Unknown error';
-            setErrorToastMessage('Failed to recognize plant. Please try again.\n' + errorMsg);
+            setErrorToastMessage('Failed to recognize plant using the AI model.\n' + errorMsg);
             setShowErrorToast(true);
         } finally {
             setLoading(false);
@@ -115,6 +125,7 @@ const PlantRecognize = () => {
                     type="error"
                     onClose={() => setShowErrorToast(false)}
                     duration={5000}
+                    className="z-index-50"
                 />
             )}
             {/* Success Toast */}

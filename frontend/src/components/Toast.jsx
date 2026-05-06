@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { SuccessIcon, CrossIcon } from './Icons';
 
 const Toast = ({ message, type = 'success', onClose, duration = 3000 }) => {
@@ -14,8 +15,8 @@ const Toast = ({ message, type = 'success', onClose, duration = 3000 }) => {
   const bgColor = type === 'success' ? 'from-emerald-500 to-teal-500' : type === 'error' ? 'from-rose-500 to-red-500' : 'from-cyan-500 to-blue-500';
   const Icon = type === 'success' ? SuccessIcon : null;
 
-  return (
-    <div className="fixed top-4 right-4 z-50 animate-slideIn">
+  const toastNode = (
+    <div className="fixed top-4 right-4 animate-slideIn" style={{ zIndex: 99999 }}>
       <div className={`bg-gradient-to-r ${bgColor} text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[300px] backdrop-blur-xl border border-white/15`}>
         {Icon && <Icon className="w-6 h-6 flex-shrink-0" />}
         <span className="flex-1 font-medium">{message}</span>
@@ -31,6 +32,12 @@ const Toast = ({ message, type = 'success', onClose, duration = 3000 }) => {
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(toastNode, document.body);
+  }
+
+  return toastNode;
 };
 
 export default Toast;

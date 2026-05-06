@@ -18,6 +18,8 @@ const Header = () => {
   const { user, clearUser } = useContext(UserContext);
   const timerRef = useRef(null);
   const notificationRef = useRef(null);
+  const desktopSearchRef = useRef(null);
+  const mobileSearchRef = useRef(null);
 
   useEffect(() => {
     if (!query) {
@@ -150,12 +152,26 @@ const Header = () => {
           {/* Search bar (desktop only) */}
           <div className="hidden md:block ml-4 relative w-72">
             <input
+              ref={desktopSearchRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search plants..."
               className="glass-input py-2 w-full text-sm"
             />
+            {query && (
+              <button
+                onClick={() => {
+                  setQuery('');
+                  setShowSuggestions(false);
+                  desktopSearchRef.current?.focus();
+                }}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-200 hover:text-white"
+              >
+                ✕
+              </button>
+            )}
             {showSuggestions && suggestions.length > 0 && (
               <ul className="absolute left-0 right-0 mt-2 glass-card text-slate-100 z-50 max-h-60 overflow-auto py-2">
                 {suggestions.map((s) => (
@@ -227,12 +243,26 @@ const Header = () => {
               </>
             )}
             <input
+              ref={mobileSearchRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search plants..."
               className="glass-input mt-2 py-2"
             />
+            {query && (
+              <button
+                onClick={() => {
+                  setQuery('');
+                  setShowSuggestions(false);
+                  mobileSearchRef.current?.focus();
+                }}
+                aria-label="Clear search"
+                className="ml-2 text-slate-200 hover:text-white"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
       )}
