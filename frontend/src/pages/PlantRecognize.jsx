@@ -51,7 +51,12 @@ const PlantRecognize = () => {
                     scientific_name: data.scientific_name || '',
                     confidence: typeof data.confidence === 'number' ? data.confidence : null,
                     confidence_percentage: data.confidence_percentage ?? (typeof data.confidence === 'number' ? (data.confidence * 100).toFixed(2) : null),
+                    common_name: data.common_name || '',
+                    nepali_name: data.nepali_name || '',
+                    caption: data.caption || '',
+                    uses: Array.isArray(data.uses) ? data.uses : [],
                     all_predictions: data.all_predictions || {},
+                    top_5_predictions: data.top_5_predictions || data.all_predictions || {},
                     organ: data.organ || 'auto',
                     raw: data.raw || data,
                 };

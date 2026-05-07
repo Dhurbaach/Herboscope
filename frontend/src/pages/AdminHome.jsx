@@ -32,7 +32,7 @@ export default function AdminHome({ api }) {
     }
 
     api
-      .get('/home')
+      .get('/home', { params: { limit: 20 } })
       .then((res) => {
         // The backend may return the array or an object; handle both
         const data = Array.isArray(res.data) ? res.data : res.data.plants || samplePlants;

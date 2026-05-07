@@ -35,12 +35,14 @@ const normalizeImagePath = (req, imgPath) => {
 };
 
 
-// GET /home - Fetch all plants from, supports ?q=search 
+// GET /home - Fetch all plants from, supports ?q=search and ?limit=N
 router.get('/home', async (req, res) => {
   try {
     const q = req.query.q;
+    const requestedLimit = parseInt(req.query.limit, 10);
+    const defaultLimit = q ? 50 : 10;
+    const limit = Number.isInteger(requestedLimit) && requestedLimit > 0 ? Math.min(requestedLimit, 200) : defaultLimit;
     const filter = q ? { plantName: { $regex: q, $options: 'i' } } : {};
-    const limit = q ? 50 : 10;
     const images = await Plant.find(filter).limit(limit).sort({ createdAt: -1 });
 
     const mapped = images.map((img) => ({
@@ -172,18 +174,27 @@ router.post('/identify', uploadIdentify.single("image"), async (req, res) => {
           ? Number((confidence * 100).toFixed(2))
           : null;
     const topPredictions = prediction.top_5_predictions || data.top_5_predictions || data.all_predictions || {};
+    const caption = data.caption || prediction.caption || '';
+    const commonName = data.common_name || prediction.common_name || plantName;
+    const nepaliName = data.nepali_name || prediction.nepali_name || '';
+    const scientificName = data.scientific_name || prediction.scientific_name || '';
+    const uses = data.uses || prediction.uses || [];
 
     console.log('AI model response:', data);
     res.json({
       success: true,
       message: 'Plant identified successfully using our AI model',
       plant_name: plantName,
-      scientific_name: prediction.scientific_name || data.scientific_name || '',
+      scientific_name: scientificName,
+      common_name: commonName,
+      nepali_name: nepaliName,
+      uses: uses,
       confidence,
       confidence_percentage: confidencePercentage,
       class_index: prediction.class_index ?? data.class_index ?? null,
       all_predictions: topPredictions,
       top_5_predictions: topPredictions,
+      caption,
       organ: data.organ || organ,
       raw: data,
     });

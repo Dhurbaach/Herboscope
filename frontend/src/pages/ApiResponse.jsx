@@ -7,7 +7,6 @@ const ApiResponse = () => {
     const navigate = useNavigate();
     const [plantData, setPlantData] = useState(null);
     const [uploadedImage, setUploadedImage] = useState(null);
-    const [selectedResult, setSelectedResult] = useState(0);
     const [similarImages, setSimilarImages] = useState([]);
     const [loadingImages, setLoadingImages] = useState(false);
 
@@ -22,30 +21,20 @@ const ApiResponse = () => {
         }
     }, [location, navigate]);
 
-    const isPlantNetShape = (data) => Boolean(data?.results && Array.isArray(data.results));
-
     const getPrimaryPrediction = (data) => {
-        if (isPlantNetShape(data)) {
-            const firstResult = data.results[0];
-            return {
-                name: firstResult?.species?.scientificNameWithoutAuthor || 'Unknown plant',
-                confidence: typeof firstResult?.score === 'number' ? firstResult.score : null,
-                scientificName: firstResult?.species?.scientificNameWithoutAuthor || '',
-                commonNames: firstResult?.species?.commonNames || [],
-            };
-        }
-
         const confidenceValue = typeof data?.confidence === 'number'
             ? data.confidence
-            : typeof data?.confidence_percentage === 'string'
+            : typeof data?.confidence_percentage === 'number'
                 ? Number(data.confidence_percentage) / 100
-                : null;
+                : typeof data?.confidence_percentage === 'string'
+                    ? Number(data.confidence_percentage) / 100
+                    : null;
 
         return {
             name: data?.plant_name || data?.scientific_name || 'Unknown plant',
             confidence: confidenceValue,
             scientificName: data?.scientific_name || data?.plant_name || '',
-            commonNames: [],
+            commonNames: data?.common_name ? [data.common_name] : [],
         };
     };
 
@@ -55,20 +44,11 @@ const ApiResponse = () => {
             return;
         }
 
-        if (isPlantNetShape(plantData) && plantData.results.length > 0) {
-            const topResult = plantData.results[selectedResult];
-            const query = topResult?.species?.scientificNameWithoutAuthor;
-            if (query) {
-                fetchSimilarImages(query);
-            }
-            return;
-        }
-
-        const query = plantData.scientific_name || plantData.plant_name;
+        const query = plantData.scientific_name || plantData.plant_name || plantData.common_name;
         if (query) {
             fetchSimilarImages(query);
         }
-    }, [selectedResult, plantData]);
+    }, [plantData]);
 
     const fetchSimilarImages = async (query) => {
         setLoadingImages(true);
@@ -93,12 +73,13 @@ const ApiResponse = () => {
         );
     }
 
-    const isPlantNet = isPlantNetShape(plantData);
-    const results = isPlantNet ? plantData.results || [] : [];
     const primaryPrediction = getPrimaryPrediction(plantData);
     const score = primaryPrediction.confidence !== null ? (primaryPrediction.confidence * 100).toFixed(1) : 'N/A';
+    const sortedTopPredictions = Object.entries(plantData.all_predictions || {})
+        .sort(([, firstValue], [, secondValue]) => Number(secondValue) - Number(firstValue))
+        .slice(0, 5);
 
-    if (!isPlantNet && !plantData.plant_name && !plantData.scientific_name) {
+    if (!plantData.plant_name && !plantData.scientific_name) {
         return (
             <div className="min-h-screen p-6">
                 <div className="max-w-4xl mx-auto">
@@ -117,7 +98,7 @@ const ApiResponse = () => {
         );
     }
 
-    const topResult = isPlantNet ? results[selectedResult] : null;
+    const topResult = null;
 
     return (
         <div className="min-h-screen p-6">
@@ -125,138 +106,113 @@ const ApiResponse = () => {
                 {/* Header */}
                 <div className="text-center mb-8 glass-panel p-8 text-white">
                     <h1 className="page-title mb-2">Plant Identification Results</h1>
-                    <p className="page-subtitle">
-                        {isPlantNet ? `Showing ${results.length} possible matches` : 'Showing the AI model prediction'}
-                    </p>
+                    <p className="page-subtitle">Showing the AI model prediction</p>
                 </div>
 
-                {/* ROW 1: Uploaded Image (Left) | Details (Right) */}
+                {/* ROW 1: Uploaded image left | Details and caption right */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 lg:auto-rows-max">
-                    {/* Left: Uploaded Image */}
-                    {uploadedImage && (
-                        <div className="glass-panel p-6 h-full text-white">
-                            <h2 className="text-xl font-bold text-slate-50 mb-4">Your Uploaded Image</h2>
+                    <div className="glass-panel p-6 h-full text-white">
+                        <h2 className="text-xl font-bold text-slate-50 mb-4">Your Uploaded Image</h2>
+                        {uploadedImage ? (
                             <img
                                 src={uploadedImage}
                                 alt="Uploaded plant"
                                 className="w-full rounded-xl border border-white/10 shadow-lg"
                             />
-                        </div>
-                    )}
+                        ) : (
+                            <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-slate-200/70 text-center">
+                                No image available
+                            </div>
+                        )}
+                    </div>
 
-                    {/* Right: Main Details */}
-                    <div className="h-full">
-                        {/* Main Result Card */}
-                        <div className="glass-panel overflow-hidden h-full flex flex-col text-white">
-                            <div className="bg-gradient-to-r from-cyan-500/70 via-emerald-500/70 to-teal-500/70 text-white p-6">
-                                <h2 className="text-3xl font-bold mb-2">{primaryPrediction.name}</h2>
-                                {isPlantNet && topResult?.species?.commonNames && topResult.species.commonNames.length > 0 && (
-                                    <p className="text-cyan-50/80">Common names: {topResult.species.commonNames.join(', ')}</p>
+                    <div className="glass-panel overflow-hidden h-full flex flex-col text-white">
+                        <div className="bg-gradient-to-r from-cyan-500/70 via-emerald-500/70 to-teal-500/70 text-white p-6">
+                            <h2 className="text-3xl font-bold mb-2">{primaryPrediction.name}</h2>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-cyan-50/90">
+                                {plantData.common_name && (
+                                    <p><span className="font-semibold">Common Name:</span> {plantData.common_name}</p>
+                                )}
+                                {plantData.scientific_name && (
+                                    <p><span className="font-semibold">Scientific Name:</span> <em>{plantData.scientific_name}</em></p>
+                                )}
+                                {plantData.nepali_name && (
+                                    <p><span className="font-semibold">Nepali Name:</span> {plantData.nepali_name}</p>
                                 )}
                             </div>
+                        </div>
 
-                            <div className="p-6 space-y-6 flex-grow">
-                                {/* Confidence Score */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="font-semibold text-slate-200">Match Confidence</span>
-                                        <span className="text-2xl font-bold text-cyan-200">{score}%</span>
-                                    </div>
-                                    <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
-                                        <div
-                                            className="bg-gradient-to-r from-cyan-400 via-emerald-400 to-teal-400 h-3 rounded-full transition-all"
-                                            style={{ width: `${score === 'N/A' ? 0 : score}%` }}
-                                        />
-                                    </div>
+                        <div className="p-6 space-y-5 flex-grow">
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="font-semibold text-slate-200">Match Confidence</span>
+                                    <span className="text-2xl font-bold text-cyan-200">{score}%</span>
                                 </div>
+                                <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+                                    <div
+                                        className="bg-gradient-to-r from-cyan-400 via-emerald-400 to-teal-400 h-3 rounded-full transition-all"
+                                        style={{ width: `${score === 'N/A' ? 0 : score}%` }}
+                                    />
+                                </div>
+                            </div>
 
-                                {/* Family Information */}
-                                {isPlantNet && topResult?.species?.family && (
-                                    <div className="pb-4 border-b border-white/10">
-                                        <h3 className="font-semibold text-slate-100 mb-1">Plant Family</h3>
-                                        <p className="text-slate-200/80 text-sm">{topResult.species.family.scientificNameWithoutAuthor}</p>
-                                        {topResult.species.family.commonNames && topResult.species.family.commonNames.length > 0 && (
-                                            <p className="text-xs text-slate-200/60 mt-1">Family: {topResult.species.family.commonNames.join(', ')}</p>
-                                        )}
-                                    </div>
-                                )}
+                            {plantData.caption && (
+                                <div className="rounded-xl border border-cyan-300/30 bg-cyan-500/10 p-4">
+                                    <h3 className="font-semibold text-cyan-100 mb-2">Plant description</h3>
+                                    <p className="text-slate-100 leading-relaxed">{plantData.caption}</p>
+                                </div>
+                            )}
 
-                                {/* Genus Information */}
-                                {isPlantNet && topResult?.species?.genus && (
-                                    <div>
-                                        <h3 className="font-semibold text-slate-100 mb-1">Genus</h3>
-                                        <p className="text-slate-200/80 text-sm">{topResult.species.genus.scientificNameWithoutAuthor}</p>
-                                        {topResult.species.genus.commonNames && topResult.species.genus.commonNames.length > 0 && (
-                                            <p className="text-xs text-slate-200/60 mt-1">Common: {topResult.species.genus.commonNames.join(', ')}</p>
-                                        )}
-                                    </div>
-                                )}
+                            {plantData.uses && Array.isArray(plantData.uses) && plantData.uses.length > 0 && (
+                                <div className="rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-4">
+                                    <h3 className="font-semibold text-emerald-100 mb-2">Uses</h3>
+                                    <ul className="list-disc list-inside text-slate-100 space-y-1">
+                                        {plantData.uses.map((use, idx) => (
+                                            <li key={idx}>{use}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            <div className="rounded-xl border border-amber-300/30 bg-amber-500/10 p-4 text-amber-50/90">
+                                <p className="text-xs leading-relaxed">
+                                    Warning: Avoid overusing any plant remedy, and do not rely completely on AI model outputs.
+                                    Please consult a qualified medical professional or botanist before use.
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* ROW 2: Matches (Left) | Similar Images (Right) */}
+                {/* ROW 2: Top matches left | Similar images right */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    {/* Left: Matches List */}
                     <div className="glass-panel p-6 text-white">
-                        <h2 className="text-xl font-bold text-slate-50 mb-4">{isPlantNet ? 'All Matches' : 'Model Output'}</h2>
-                        {isPlantNet ? (
-                            <div className="space-y-3 max-h-96 overflow-y-auto">
-                                {results.map((result, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => setSelectedResult(index)}
-                                        className={`w-full text-left p-4 rounded-xl transition border ${selectedResult === index
-                                                ? 'border-cyan-300/50 bg-white/10'
-                                                : 'border-white/10 bg-white/5 hover:border-cyan-300/40'
-                                            }`}
-                                    >
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold text-slate-100 text-sm">{result.species.scientificNameWithoutAuthor}</h3>
-                                                {result.species.commonNames && result.species.commonNames.length > 0 && (
-                                                    <p className="text-xs text-slate-200/60 mt-1">{result.species.commonNames.slice(0, 2).join(', ')}</p>
-                                                )}
-                                            </div>
-                                            <div className={`text-lg font-bold ml-2 ${selectedResult === index ? 'text-cyan-200' : 'text-emerald-200'
-                                                }`}>
-                                                {(result.score * 100).toFixed(1)}%
-                                            </div>
-                                        </div>
-                                    </button>
-                                ))}
+                        <h2 className="text-xl font-bold text-slate-50 mb-4">Top Matches</h2>
+                        <div className="space-y-3">
+                            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                                <p className="text-sm text-slate-200/70 mb-1">Plant name</p>
+                                <p className="font-semibold text-slate-50">{plantData.plant_name || plantData.scientific_name || 'Unknown'}</p>
                             </div>
-                        ) : (
-                            <div className="space-y-3">
-                                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                                    <p className="text-sm text-slate-200/70 mb-1">Plant name</p>
-                                    <p className="font-semibold text-slate-50">{plantData.plant_name || plantData.scientific_name || 'Unknown'}</p>
-                                </div>
-                                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                                    <p className="text-sm text-slate-200/70 mb-1">Confidence</p>
-                                    <p className="font-semibold text-slate-50">{score}%</p>
-                                </div>
-                                {Object.keys(plantData.all_predictions || {}).length > 0 && (
-                                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 max-h-64 overflow-y-auto">
-                                        <p className="text-sm text-slate-200/70 mb-3">Top 5 predictions</p>
-                                        <div className="space-y-2">
-                                            {Object.entries(plantData.all_predictions).slice(0, 5).map(([name, value]) => (
-                                                <div key={name} className="flex items-center justify-between gap-3 text-sm">
-                                                    <span className="text-slate-100">{name}</span>
-                                                    <span className="text-cyan-200 font-semibold">{(Number(value) * 100).toFixed(1)}%</span>
-                                                </div>
-                                            ))}
-                                        </div>
+                            <div className="rounded-xl border border-white/10 bg-white/5 p-4 max-h-64 overflow-y-auto">
+                                <p className="text-sm text-slate-200/70 mb-3">Top 5 predictions</p>
+                                {sortedTopPredictions.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {sortedTopPredictions.map(([name, value]) => (
+                                            <div key={name} className="flex items-center justify-between gap-3 text-sm">
+                                                <span className="text-slate-100">{name}</span>
+                                                <span className="text-cyan-200 font-semibold">{(Number(value) * 100).toFixed(1)}%</span>
+                                            </div>
+                                        ))}
                                     </div>
+                                ) : (
+                                    <p className="text-slate-200/60 text-sm">No prediction breakdown available.</p>
                                 )}
                             </div>
-                        )}
+                        </div>
                     </div>
 
-                    {/* Right: Similar Images from Wikimedia */}
                     <div className="glass-panel p-6 text-white">
-                        <h2 className="text-xl font-bold text-slate-50 mb-4">Similar Images from Wikimedia</h2>
+                        <h2 className="text-xl font-bold text-slate-50 mb-4">Similar Images from Wikipedia</h2>
                         {loadingImages && (
                             <div className="flex items-center justify-center h-96">
                                 <p className="text-slate-200/70">Searching for similar images...</p>

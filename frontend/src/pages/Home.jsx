@@ -20,7 +20,7 @@ export default function Home({ api }) {
     }
 
     api
-      .get('/home')
+      .get('/home', { params: { limit: 20 } })
       .then((res) => {
         const data = Array.isArray(res.data) ? res.data : res.data.plants || [];
         setPlants(data);
