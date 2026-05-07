@@ -9,6 +9,12 @@ const ApiResponse = () => {
     const [uploadedImage, setUploadedImage] = useState(null);
     const [similarImages, setSimilarImages] = useState([]);
     const [loadingImages, setLoadingImages] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [speechLanguage, setSpeechLanguage] = useState('en'); // 'en' or 'ne'
+    const [speechSupported] = useState('speechSynthesis' in window);
+    const [translations, setTranslations] = useState({});
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [availableVoices, setAvailableVoices] = useState([]);
 
     useEffect(() => {
         // Get response data from location state (passed from PlantRecognize)
@@ -20,6 +26,21 @@ const ApiResponse = () => {
             navigate('/recognize');
         }
     }, [location, navigate]);
+
+    // Load available voices
+    useEffect(() => {
+        const loadVoices = () => {
+            const voices = window.speechSynthesis.getVoices();
+            setAvailableVoices(voices);
+            console.log('Available voices:', voices.map(v => ({ name: v.name, lang: v.lang })));
+        };
+
+        if (speechSupported) {
+            loadVoices();
+            // Some browsers load voices asynchronously
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+    }, [speechSupported]);
 
     const getPrimaryPrediction = (data) => {
         const confidenceValue = typeof data?.confidence === 'number'
@@ -63,6 +84,217 @@ const ApiResponse = () => {
         } finally {
             setLoadingImages(false);
         }
+    };
+
+    const findVoiceForLanguage = (lang) => {
+        // lang format: 'en' or 'ne'
+        const voices = window.speechSynthesis.getVoices();
+        
+        // First, try to find exact match
+        let voice = voices.find(v => v.lang.startsWith(lang));
+        
+        // If no exact match and lang is 'ne', try any variant
+        if (!voice && lang === 'ne') {
+            voice = voices.find(v => v.lang.includes('hi') || v.lang.includes('ne'));
+        }
+        
+        // Log available voices for debugging
+        if (!voice) {
+            console.warn(`No voice found for language: ${lang}`);
+            console.log('Available voices:', voices.map(v => ({ name: v.name, lang: v.lang })));
+        } else {
+            console.log(`Selected voice: ${voice.name} (${voice.lang})`);
+        }
+        
+        return voice || null;
+    };
+
+    const translateToNepali = async (text) => {
+        if (!text) return '';
+        
+        // Check if already translated
+        if (translations[text]) {
+            return translations[text];
+        }
+
+        try {
+            // Using MyMemory free translation API
+            const response = await fetch(
+                `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ne`
+            );
+            const data = await response.json();
+            
+            if (data.responseStatus === 200 && data.responseData?.translatedText) {
+                const translatedText = data.responseData.translatedText;
+                console.log(`Translated: "${text}" -> "${translatedText}"`);
+                setTranslations(prev => ({ ...prev, [text]: translatedText }));
+                return translatedText;
+            } else {
+                console.warn('Translation API error:', data);
+            }
+        } catch (error) {
+            console.error('Translation error:', error);
+        }
+        
+        // Return original text if translation fails
+        console.log(`Translation failed, returning original: "${text}"`);
+        return text;
+    };
+
+    const speakDescription = async () => {
+        if (!speechSupported && speechLanguage === 'ne') {
+            // For Nepali, try API-based TTS first
+            console.log('Attempting API-based TTS for Nepali...');
+        }
+
+        if (isSpeaking) {
+            // Stop speaking
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            return;
+        }
+
+        let textToSpeak = '';
+        let language = '';
+
+        if (speechLanguage === 'ne') {
+            // Nepali speech with translation
+            setIsTranslating(true);
+            language = 'ne';
+            
+            try {
+                // Include plant names
+                if (plantData.nepali_name) {
+                    textToSpeak += `${plantData.nepali_name}. `;
+                }
+                // if (plantData.plant_name) {
+                //     textToSpeak += `${plantData.plant_name}. `;
+                // }
+                
+                // Translate caption
+                if (plantData.caption) {
+                    const translatedCaption = await translateToNepali(plantData.caption);
+                    textToSpeak += translatedCaption + '. ';
+                }
+                
+                // Translate uses
+                if (plantData.uses && Array.isArray(plantData.uses) && plantData.uses.length > 0) {
+                    textToSpeak += 'उपयोग: '; // "Uses" in Nepali
+                    const translatedUses = [];
+                    for (const use of plantData.uses) {
+                        const translated = await translateToNepali(use);
+                        translatedUses.push(translated);
+                    }
+                    textToSpeak += translatedUses.join(', ');
+                }
+                
+                console.log('Nepali text to speak:', textToSpeak);
+                
+                // Try API-based TTS first
+                await speakViaAPI(textToSpeak, language);
+                setIsTranslating(false);
+                return;
+            } catch (error) {
+                console.error('API TTS error, falling back to system voice:', error);
+                setIsTranslating(false);
+                // Continue to system voice fallback
+            }
+        } else {
+            // English speech (default)
+            language = 'en';
+            textToSpeak = plantData.caption || '';
+            if (plantData.uses && Array.isArray(plantData.uses) && plantData.uses.length > 0) {
+                textToSpeak += '. Uses: ' + plantData.uses.join(', ');
+            }
+        }
+
+        if (!textToSpeak.trim()) {
+            console.error('No text to speak:', { caption: plantData.caption, uses: plantData.uses });
+            alert(`No description available in ${speechLanguage === 'ne' ? 'Nepali' : 'English'}`);
+            return;
+        }
+
+        // Fallback to system voice
+        console.log('Using system voice for:', language);
+        speakViaSystemVoice(textToSpeak, language === 'ne' ? 'ne-NP' : 'en-US');
+    };
+
+    const speakViaAPI = async (text, language) => {
+        try {
+            console.log('Requesting TTS from API:', { text: text.substring(0, 50), language });
+            
+            const response = await api.post('/tts', {
+                text,
+                language: language === 'ne' ? 'ne-NP' : 'en-US'
+            });
+            
+            if (response.data.audioUrl || response.data.audio) {
+                const audioUrl = response.data.audioUrl || `data:audio/mp3;base64,${response.data.audio}`;
+                const audio = new Audio(audioUrl);
+                
+                audio.onplay = () => setIsSpeaking(true);
+                audio.onended = () => setIsSpeaking(false);
+                audio.onerror = (error) => {
+                    console.error('Audio playback error:', error);
+                    setIsSpeaking(false);
+                    alert('Error playing audio. Trying system voice...');
+                };
+                
+                await audio.play();
+                console.log('Playing audio from API');
+            } else {
+                throw new Error('No audio data in response');
+            }
+        } catch (error) {
+            console.error('API TTS failed:', error);
+            throw error;
+        }
+    };
+
+    const speakViaSystemVoice = (textToSpeak, lang) => {
+        if (!speechSupported) {
+            alert('Text-to-Speech is not supported in your browser');
+            return;
+        }
+
+        console.log('Speaking text:', textToSpeak, 'Language:', lang);
+        
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+
+        // Try to find and set the appropriate voice
+        if (lang === 'ne-NP') {
+            const nepaliVoice = findVoiceForLanguage('ne');
+            if (nepaliVoice) {
+                utterance.voice = nepaliVoice;
+                utterance.lang = nepaliVoice.lang;
+                console.log(`Using Nepali voice: ${nepaliVoice.name}`);
+            } else {
+                console.warn('No Nepali voice found.');
+                alert('⚠️ Nepali voice not available. Install Nepali language pack or check backend TTS service.');
+                return;
+            }
+        } else {
+            utterance.lang = lang;
+        }
+
+        utterance.onstart = () => {
+            console.log('Speech started');
+            setIsSpeaking(true);
+        };
+        utterance.onend = () => {
+            console.log('Speech ended');
+            setIsSpeaking(false);
+        };
+        utterance.onerror = (event) => {
+            console.error('Speech synthesis error:', event.error);
+            alert(`Speech error: ${event.error}`);
+            setIsSpeaking(false);
+        };
+
+        window.speechSynthesis.speak(utterance);
     };
 
     if (!plantData) {
@@ -158,7 +390,63 @@ const ApiResponse = () => {
 
                             {plantData.caption && (
                                 <div className="rounded-xl border border-cyan-300/30 bg-cyan-500/10 p-4">
-                                    <h3 className="font-semibold text-cyan-100 mb-2">Plant description</h3>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="font-semibold text-cyan-100">Plant description</h3>
+                                        {speechSupported && (
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex gap-1 bg-white/10 p-1 rounded-lg">
+                                                    <button
+                                                        onClick={() => setSpeechLanguage('en')}
+                                                        className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                                            speechLanguage === 'en'
+                                                                ? 'bg-cyan-500/80 text-white'
+                                                                : 'text-slate-300 hover:text-white'
+                                                        }`}
+                                                        title="Read in English"
+                                                    >
+                                                        EN
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setSpeechLanguage('ne')}
+                                                        className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                                            speechLanguage === 'ne'
+                                                                ? 'bg-cyan-500/80 text-white'
+                                                                : 'text-slate-300 hover:text-white'
+                                                        }`}
+                                                        title="Read in Nepali"
+                                                    >
+                                                        NE
+                                                    </button>
+                                                </div>
+                                                <button
+                                                    onClick={speakDescription}
+                                                    disabled={isTranslating}
+                                                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                                                        isTranslating
+                                                            ? 'bg-amber-500/60 text-white cursor-wait'
+                                                            : isSpeaking
+                                                            ? 'bg-red-500/80 text-white hover:bg-red-600'
+                                                            : 'bg-cyan-500/60 text-white hover:bg-cyan-600'
+                                                    }`}
+                                                    title={isTranslating ? 'Translating...' : isSpeaking ? 'Stop speaking' : 'Read aloud'}
+                                                >
+                                                    {isTranslating ? (
+                                                        <>
+                                                            <span>⏳ Translating...</span>
+                                                        </>
+                                                    ) : isSpeaking ? (
+                                                        <>
+                                                            <span>⏹ Stop</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span>🔊 Read</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                     <p className="text-slate-100 leading-relaxed">{plantData.caption}</p>
                                 </div>
                             )}
