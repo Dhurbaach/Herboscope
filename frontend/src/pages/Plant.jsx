@@ -287,7 +287,7 @@ export default function Plant() {
           message={toastMessage}
           type={toastType}
           onClose={() => setShowToast(false)}
-          duration={4000}
+          duration={9000}
         />
       )}
     </div>

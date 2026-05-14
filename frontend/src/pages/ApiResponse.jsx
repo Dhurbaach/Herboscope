@@ -15,6 +15,9 @@ const ApiResponse = () => {
     const [translations, setTranslations] = useState({});
     const [isTranslating, setIsTranslating] = useState(false);
     const [availableVoices, setAvailableVoices] = useState([]);
+    const [nepaliCaption, setNepaliCaption] = useState('');
+    const [nepaliUses, setNepaliUses] = useState([]);
+    const [isTranslatingDisplay, setIsTranslatingDisplay] = useState(false);
 
     useEffect(() => {
         // Get response data from location state (passed from PlantRecognize)
@@ -111,34 +114,79 @@ const ApiResponse = () => {
 
     const translateToNepali = async (text) => {
         if (!text) return '';
-        
+
+        const normalizedText = String(text).trim();
+        if (!normalizedText) return '';
+
         // Check if already translated
-        if (translations[text]) {
-            return translations[text];
+        if (translations[normalizedText]) {
+            return translations[normalizedText];
         }
 
-        try {
-            // Using MyMemory free translation API
-            const response = await fetch(
-                `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ne`
-            );
-            const data = await response.json();
-            
-            if (data.responseStatus === 200 && data.responseData?.translatedText) {
-                const translatedText = data.responseData.translatedText;
-                console.log(`Translated: "${text}" -> "${translatedText}"`);
-                setTranslations(prev => ({ ...prev, [text]: translatedText }));
-                return translatedText;
-            } else {
-                console.warn('Translation API error:', data);
+        const translateChunk = async (chunk) => {
+            const trimmedChunk = String(chunk || '').trim();
+            if (!trimmedChunk) return '';
+
+            try {
+                const response = await fetch(
+                    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmedChunk)}&langpair=en|ne`
+                );
+                const data = await response.json();
+
+                if (data.responseStatus === 200 && data.responseData?.translatedText) {
+                    return String(data.responseData.translatedText).trim();
+                }
+
+                console.warn('Translation API error for chunk:', data);
+            } catch (error) {
+                console.error('Translation error for chunk:', error);
             }
-        } catch (error) {
-            console.error('Translation error:', error);
+
+            return trimmedChunk;
+        };
+
+        // Long captions often fail in one request on free translation APIs.
+        // Split sentence-wise to improve translation reliability.
+        const maxChunkLength = 220;
+        const sentenceChunks = normalizedText
+            .split(/(?<=[.!?])\s+/)
+            .map((chunk) => chunk.trim())
+            .filter(Boolean);
+
+        const chunks = [];
+        for (const sentence of sentenceChunks.length ? sentenceChunks : [normalizedText]) {
+            if (sentence.length <= maxChunkLength) {
+                chunks.push(sentence);
+                continue;
+            }
+
+            const words = sentence.split(' ');
+            let current = '';
+            for (const word of words) {
+                const candidate = `${current} ${word}`.trim();
+                if (candidate.length > maxChunkLength && current) {
+                    chunks.push(current);
+                    current = word;
+                } else {
+                    current = candidate;
+                }
+            }
+            if (current) chunks.push(current);
         }
-        
-        // Return original text if translation fails
-        console.log(`Translation failed, returning original: "${text}"`);
-        return text;
+
+        const translatedParts = [];
+        for (const chunk of chunks) {
+            // Sequential requests reduce free API throttling/timeout issues.
+            const translatedChunk = await translateChunk(chunk);
+            translatedParts.push(translatedChunk);
+        }
+
+        const translatedText = translatedParts.join(' ').replace(/\s+/g, ' ').trim();
+        const finalText = translatedText || normalizedText;
+
+        console.log(`Translated: "${normalizedText}" -> "${finalText}"`);
+        setTranslations(prev => ({ ...prev, [normalizedText]: finalText }));
+        return finalText;
     };
 
     const speakDescription = async () => {
@@ -218,6 +266,57 @@ const ApiResponse = () => {
         console.log('Using system voice for:', language);
         speakViaSystemVoice(textToSpeak, language === 'ne' ? 'ne-NP' : 'en-US');
     };
+
+    // When user selects Nepali as speech language, pre-translate caption and uses for on-screen display
+    useEffect(() => {
+        let mounted = true;
+
+        const prepareDisplayTranslations = async () => {
+            if (speechLanguage !== 'ne') {
+                if (mounted) {
+                    setNepaliCaption('');
+                    setNepaliUses([]);
+                    setIsTranslatingDisplay(false);
+                }
+                return;
+            }
+
+            setIsTranslatingDisplay(true);
+
+            try {
+                if (plantData?.caption) {
+                    const t = await translateToNepali(plantData.caption);
+                    if (mounted) setNepaliCaption(t);
+                } else {
+                    if (mounted) setNepaliCaption('');
+                }
+
+                if (plantData?.uses && Array.isArray(plantData.uses) && plantData.uses.length > 0) {
+                    const translatedUses = [];
+                    for (const use of plantData.uses) {
+                        // translate each use sequentially to avoid throttling
+                        const tu = await translateToNepali(use);
+                        translatedUses.push(tu);
+                    }
+                    if (mounted) setNepaliUses(translatedUses);
+                } else {
+                    if (mounted) setNepaliUses([]);
+                }
+            } catch (err) {
+                console.error('Display translation failed:', err);
+                if (mounted) {
+                    setNepaliCaption('');
+                    setNepaliUses([]);
+                }
+            } finally {
+                if (mounted) setIsTranslatingDisplay(false);
+            }
+        };
+
+        prepareDisplayTranslations();
+
+        return () => { mounted = false; };
+    }, [speechLanguage, plantData?.caption, JSON.stringify(plantData?.uses || [])]);
 
     const speakViaAPI = async (text, language) => {
         try {
@@ -447,18 +546,37 @@ const ApiResponse = () => {
                                             </div>
                                         )}
                                     </div>
-                                    <p className="text-slate-100 leading-relaxed">{plantData.caption}</p>
+                                    <div>
+                                        {speechLanguage === 'ne' ? (
+                                            <p className="text-slate-100 leading-relaxed">{isTranslatingDisplay ? '⏳ Translating to Nepali...' : (nepaliCaption || '—')}</p>
+                                        ) : (
+                                            <p className="text-slate-100 leading-relaxed">{plantData.caption}</p>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 
                             {plantData.uses && Array.isArray(plantData.uses) && plantData.uses.length > 0 && (
                                 <div className="rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-4">
                                     <h3 className="font-semibold text-emerald-100 mb-2">Uses</h3>
-                                    <ul className="list-disc list-inside text-slate-100 space-y-1">
-                                        {plantData.uses.map((use, idx) => (
-                                            <li key={idx}>{use}</li>
-                                        ))}
-                                    </ul>
+
+                                    {speechLanguage === 'ne' ? (
+                                        isTranslatingDisplay ? (
+                                            <p className="text-slate-200">⏳ Translating uses...</p>
+                                        ) : (
+                                            <ul className="list-disc list-inside text-slate-200 space-y-1">
+                                                {nepaliUses.length > 0 ? nepaliUses.map((u, i) => (
+                                                    <li key={i}>{u}</li>
+                                                )) : <li>—</li>}
+                                            </ul>
+                                        )
+                                    ) : (
+                                        <ul className="list-disc list-inside text-slate-100 space-y-1">
+                                            {plantData.uses.map((use, idx) => (
+                                                <li key={idx}>{use}</li>
+                                            ))}
+                                        </ul>
+                                    )}
                                 </div>
                             )}
 
